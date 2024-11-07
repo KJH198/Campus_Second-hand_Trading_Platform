@@ -2,7 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 import pymysql
 from flask import Flask
 
-app = Flask(__name__)
+app = Flask(__name__,template_folder='../frontEnd/templates',static_folder='../frontEnd/dist')
 
 # 标记使用MySQL数据库和pymysql接口
 # 这里填入你们本地的MySQL用户名(root)、密码(kjh030607)和schema名(buaa)
