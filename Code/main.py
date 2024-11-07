@@ -1,3 +1,5 @@
-from backEnd.DB_init import DB_init
+from backEnd import DB_Initiator,login
 import subprocess
-subprocess.run(['npm', 'run', 'dev'], check=True,cwd ="Code\\frontEnd\\login")
+DB_Initiator.init()
+login.run()
+subprocess.run(['C:\\Users\\kjh15\\AppData\\Roaming\\npm\\npm.cmd', 'run', 'dev'], check=True,cwd ="Code\\frontEnd\\login")

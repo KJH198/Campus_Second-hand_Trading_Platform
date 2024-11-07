@@ -33,8 +33,9 @@ class Log(db.Model):
     log_time = db.Column(db.DateTime, nullable = False)
     log_state = db.Column(db.Boolean, nullable = False)
 
-with app.app_context():
-    db.create_all()             # 创建所有表
+def init():
+    with app.app_context():
+        db.create_all()             # 创建所有表
 
     # #添加数据测试
     # new_user = User(user_name='KJH', phone_number='15071687155', password = '12345')
@@ -45,3 +46,4 @@ with app.app_context():
     # users = User.query.all()
     # for user in users:
     #     print(user.user_id, user.user_name, user.phone_number, user.password, user.picture, user.other_information)
+
