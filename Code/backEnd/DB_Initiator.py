@@ -1,16 +1,19 @@
 from flask_sqlalchemy import SQLAlchemy
-import pymysql
 from flask import Flask
 
-app = Flask(__name__,template_folder='../frontEnd/templates',static_folder='../frontEnd/dist',static_url_path='')
+################################### Flask项目初始化 ###################################
 
-# 标记使用MySQL数据库和pymysql接口
-# 这里填入你们本地的MySQL用户名(root)、密码(kjh030607)和schema名(buaa)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:kjh030607@localhost/buaa'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # 关闭对模型修改的跟踪，以提高性能
+# 创建Flask项目app,定义前端依赖文件路径
+app = Flask(__name__,template_folder='../dist',static_folder='../dist',static_url_path='')
+# 标记使用的MySQL数据库和pymysql接口(自己改本地的数据库密码，默认所有人有一个schema名为buaa)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:你自己的数据库密码@localhost/buaa'
+# 关闭对模型修改的跟踪，以提高性能
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # 初始化SQLAlchemy实例
 db = SQLAlchemy(app)
+
+#################################### 定义数据表 ########################################
 
 # 用户表
 class User(db.Model):
@@ -33,17 +36,11 @@ class Log(db.Model):
     log_time = db.Column(db.DateTime, nullable = False)
     log_state = db.Column(db.Boolean, nullable = False)
 
+##################################### 调用接口 ########################################
+
+# 创建所有表 
 def init():
     with app.app_context():
-        db.create_all()             # 创建所有表
+        db.create_all()            
 
-    # #添加数据测试
-    # new_user = User(user_name='KJH', phone_number='15071687155', password = '12345')
-    # db.session.add(new_user)
-    # db.session.commit()
-
-    # #查询数据测试
-    # users = User.query.all()
-    # for user in users:
-    #     print(user.user_id, user.user_name, user.phone_number, user.password, user.picture, user.other_information)
 
