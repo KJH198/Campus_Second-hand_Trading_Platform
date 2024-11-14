@@ -45,5 +45,11 @@ def login():
         print('JSON header type error!')            # 前后端数据通讯异常
         return jsonify({"success":False})
 
+@app.route('/home', methods=['GET','POST'])
+def home():
+    # if request.method == 'GET':
+        # return render_template('index.html')
+    return jsonify({"success":True})
+    
 def run():
     app.run(debug=True)
