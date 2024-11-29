@@ -17,12 +17,12 @@ db = SQLAlchemy(app)
 
 # 用户表
 class User(db.Model):
-    user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, primary_key=True)
     phone_number = db.Column(db.String(80), nullable=False, unique=True)
     user_name = db.Column(db.String(80), nullable=False)
     password = db.Column(db.String(120), nullable=False)
-    picture = db.Column(db.String(80), default = 'default_address')
-    other_information = db.Column(db.Text, nullable=True)
+    picture_url = db.Column(db.String(80), nullable=True)  # 可空
+    other_information = db.Column(db.Text, nullable=True)  # 可空
 
 # 管理员表
 class Manager(db.Model):  # 注意这里继承了 db.Model
@@ -49,12 +49,11 @@ class Goods(db.Model):
     goods_id = db.Column(db.Integer, primary_key=True)
     seller_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable = False) # 外键
     begin_time = db.Column(db.DateTime, nullable = False)
-    picture = db.Column(db.String(80), nullable = False)
     goods_name = db.Column(db.String(80), nullable = False)
-    category_name = db.Column(db.String(80), nullable = False)
+    category_name = db.Column(db.String(80), nullable = False)  
     goods_price = db.Column(db.String(80), nullable = False)
     goods_description = db.Column(db.Text, nullable = True)
-    goods_state = db.Column(db.String(80), nullable = False)
+    goods_state = db.Column(db.String(80), nullable = False)    # 在售,已售
     heat = db.Column(db.Integer, nullable = False)
     
 # 订单表
@@ -137,11 +136,14 @@ class Announcement(db.Model):
     title = db.Column(db.String(80), nullable = False)
     content = db.Column(db.Text, nullable = False)
     
+class Picture(db.Model):
+    picture_url = db.Column(db.String(80), primary_key=True)
+    goods_id = db.Column(db.Integer, db.ForeignKey('goods.goods_id'))
+    
 ##################################### 调用接口 ########################################
 
 # 创建所有表 
 def init():
     with app.app_context():
-        db.create_all()            
-
-
+        db.create_all()
+    
