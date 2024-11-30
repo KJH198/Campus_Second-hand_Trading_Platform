@@ -31,26 +31,34 @@ def register(user_name,phone_number,password):
     return True
 
 # 用户信息修改
-def reDefineUser(info): # user_id, user_name, password, picture, other_information
+def reDefineUser(info): # user_id, user_name, password, picture, pictureName, other_information
     if (info.get("user_id")): user = User.query.filter_by(user_id = info.get("user_id")).first()
     else: return False
     if (info.get("user_name")): user.user_name = info.get("user_name")
     if (info.get("password")): user.password = info.get("password")
     if (info.get("picture")): 
-        x = urlGenerator(info.get("picture"))
-        print(x)
+        x = urlGenerator(info.get("picture"),info.get("pictureName"))
         user.picture_url = x
     if (info.get("other_information")): user.other_information = info.get("other_information")
     return True
 
 # 生成图片URL
-def urlGenerator(binaryPicture):
+def urlGenerator(binaryPicture,pictureName):
     global urlCnt
-    file_path = 'C:\\Users\\kjh15\\Desktop\\Project\\Campus_Second-hand_Trading_Platform\\Code\\picture\\' + str(urlCnt) + '.jpg'
+    file_path = 'picture/' + str(urlCnt) + get_type(pictureName)
     with open(file_path, 'wb') as file:     # 二进制写入
         file.write(binaryPicture)
     urlCnt += 1
     return file_path
+
+def get_type(pictureName):
+    # 根据文件扩展名返回对应的 MIME 类型
+    if pictureName.lower().endswith(('.png')):
+        return '.png'
+    elif pictureName.lower().endswith(('.jpg', '.jpeg')):
+        return '.jpeg'
+    elif pictureName.lower().endswith(('.gif')):
+        return '.gif'
 
 # 用户信息校验
 def loginJudge(phone_number,password):
@@ -58,9 +66,9 @@ def loginJudge(phone_number,password):
     if user:
         if user.password == password:
             addLog(user,True)
-            return True    
+            return {"success":True,"user_id":user.user_id}
         addLog(user,False)  # 记录登录失败日志
-    return False
+    return {"success":False}
 
 # 记录日志
 def addLog(user,log_state):
@@ -73,9 +81,18 @@ def addLog(user,log_state):
     return True
 
 # 获得用户头像
-def getUserPicture(phone_number):
-    user = User.query.filter_by(phone_number = phone_number).first()
+def getUserPicture(user_id):
+    user = User.query.filter_by(user_id = user_id).first()
     return user.picture_url
+
+def getUserInfo(user_id):
+    user = User.query.filter_by(user_id = user_id).first()
+    phone_number = user.phone_number
+    user_name = user.user_name
+    password = user.password
+    picture_url = user.picture_url
+    other_information = user.other_information
+    return {"phone_number":phone_number,"user_name":user_name,"password":password,"picture_url":picture_url,"other_information":other_information}
 
 ################################################################################################################
 # 添加商品
@@ -94,11 +111,11 @@ def addGoods(seller_id,pictures,goods_name,category_name,goods_price,goods_descr
     db.session.commit()
     for picture in pictures:
         addPicture(newGoods,picture)
-    return True
+        return True
 
 # 为商品添加图片
-def addPicture(goods,picture):
-    url = urlGenerator(picture)
+def addPicture(goods,picture,pictureName):
+    url = urlGenerator(picture,pictureName)
     newPicture = Picture(
         picture_url = url, 
         goods_id = goods.goods_id
@@ -121,7 +138,7 @@ def reDefineGoods(info):  # goods_id,seller_id,pictures,goods_name,category_name
         for picture in info.get("pictures"): addPicture(goods,picture)
     return True
 
-# 随机获取未售卖商品
+# 随机获取在售商品预览页
 def getUnselledGoods(num):
     goods = Goods.query.filter_by(goods_state = "在售").all()
     size = len(goods)
@@ -132,9 +149,72 @@ def getUnselledGoods(num):
         goods_id = randGoods.goods_id
         goods_name = randGoods.goods_name
         goods_price = randGoods.goods_price
-        pictures = Picture.query.filter_by(goods_id = goods_id).all()
-        pictures_list = [picture.picture_url for picture in pictures]
+        first_picture = Picture.query.filter_by(goods_id = goods_id).first() # 只获取第一个图片
+        pictures_list = [first_picture.picture_url]
         data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_list})
         num -= 1
     return data
     
+# 获取商品详情页
+def getGoodsInfo(goods_id):
+    goods = Goods.query.filter_by(goods_id = goods_id).first()
+    goods_name = goods.goods_name
+    goods_price = goods.goods_price
+    goods_pictures_url = Picture.query.filter_by(goods_id = goods_id).all()
+    pictures_list = [goods_picture_url.picture_url for goods_picture_url in goods_pictures_url]
+    seller_id = goods.seller_id
+    begin_time = goods.begin_time
+    category_name = goods.category_name 
+    goods_description = goods.goods_description
+    goods_state = goods.goods_state
+    heat = goods.heat
+    return {"goods_name":goods_name,"goods_price":goods_price,"pictures_url":pictures_list,"seller_id":seller_id,
+            "begin_time":begin_time, "category_name":category_name,"goods_description":goods_description,
+            "goods_state":goods_state,"heat":heat}
+    
+# 按关键字搜索商品
+def searchGoods(info):
+    goods = None
+    if len(info) != 0 and info is not None:
+        goods = Goods.query.filter_by(goods_state="在售").filter(
+            (Goods.goods_name.contains(info)) | (Goods.goods_description.contains(info))).all()
+    size = len(goods)
+    data = []
+    for i in range(0,size):
+        searchedGoods = s[i]
+        goods_id = searchedGoods.goods_id
+        goods_name = searchedGoods.goods_name
+        goods_price = searchedGoods.goods_price
+        first_picture = Picture.query.filter_by(goods_id = goods_id).first() # 只获取第一个图片
+        pictures_list = [first_picture.picture_url]
+        data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_list})
+    return data
+
+# 按类别搜索商品
+def searchGoodsCategory(category):
+    goods = Goods.query.filter_by(category_name=category).all()    
+    size = len(goods)
+    data = []
+    for i in range(0,size):
+        searchedGoods = s[i]
+        goods_id = searchedGoods.goods_id
+        goods_name = searchedGoods.goods_name
+        goods_price = searchedGoods.goods_price
+        first_picture = Picture.query.filter_by(goods_id = goods_id).first() # 只获取第一个图片
+        pictures_list = [first_picture.picture_url]
+        data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_list})
+    return data
+
+########################################################################################################################
+def getAnnouncement():
+    announcements = Announcement.query.order_by(Announcement.deliver_time).all()
+    size = len(announcements)
+    data = []
+    for i in range(0,size):
+        announcement = announcements[i]
+        manger_name = announcement.manger_name
+        deliver_time = announcement.deliver_time
+        title = announcement.title
+        content = announcement.content
+        data.append({"manger_name":manger_name,"deliver_time":deliver_time,"title":title,"content":content})
+    return data

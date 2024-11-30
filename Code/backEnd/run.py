@@ -19,38 +19,40 @@ def login():
         else:
             # with open('1.jpg','rb') as file:  # 在第一次登录后再注释掉
             #     a = file.read()
-            # reDefineUser({"user_id":1,"picture":a})
+            # reDefineUser({"user_id":1,"picture":a,"pictureName":".jpg"})
             # with open('0.jpg','rb') as file:
             #     b = file.read()
             # addGoods(1,[b],"goods_name","category_name","goods_price","goods_description")
             return jsonify({"success":dbTools.loginJudge(data.get('phone_number'),data.get('password'))})    
     elif type == 'register':
         return jsonify({"success":dbTools.register(data.get('user_name'),data.get('phone_number'),data.get('password'))})    
-    else:       # JSON头异常
-        print('JSON header type error!')            
-        return jsonify({"success":False})
+    
 
 @app.route('/home', methods=['GET','POST'])
 def home():
     if request.method == 'GET':
-        goods = dbTools.getUnselledGoods(160)
-        json = jsonify({"goods":goods})
-        print(json)
-        return json
+        return jsonify({"goods":dbTools.getUnselledGoods(160)})
     
+    type = request.headers.get('type')
     data = request.get_json()
-    if (data.get("phone_number") != None):
+    if type == 'user_picture':
         return jsonify({"picture_url":getUserPicture(data.get("phone_number"))})
+    elif type == 'search':
+        return jsonify({"goods":dbTools.searchGoods(data.get("query"))})
+    elif type == 'category_search':
+        return jsonify({"goods":dbTools.searchGoodsCategory(data.get("category_name"))})
+    elif type == 'announcement':
+        return jsonify({"announcements":dbTools.getAnnouncement()})
 
 @app.route('/picture/<image_name>', methods=['GET'])
 def get_image(image_name):
+    # 替换为服务器端存放照片的的绝对路径或云服务器端的http路径
     image_path = os.path.join("C:\\Users\\kjh15\\Desktop\\Project\\Campus_Second-hand_Trading_Platform\\Code\\picture",image_name)
     if not os.path.exists(image_path):
         return jsonify({'error':'Image nor found'})
-    type = get_type(image_name)
-    return send_file(image_path,type)
+    type = get_type(image_name)         # 获取图片类型
+    return send_file(image_path,type)   # 发送图片文件
     
-# 这是自定义的函数，不是内置函数
 def get_type(filename):
     # 根据文件扩展名返回对应的 MIME 类型
     if filename.lower().endswith(('.png')):
