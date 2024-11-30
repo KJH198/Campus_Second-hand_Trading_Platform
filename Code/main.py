@@ -1,4 +1,2 @@
-from backEnd import DB_Initiator, login
-
-DB_Initiator.init()
-login.run()
+from backEnd import run
+run.begin()
