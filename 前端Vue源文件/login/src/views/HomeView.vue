@@ -280,6 +280,7 @@ export default {
         query: { 
           phone_number: phone_number.value,  // 添加电话号码
           user_id: user_id.value,           // 添加用户ID
+          current_user_id: user_id.value,   // 添加当前登录者的ID
           picture: product.picture,         // 商品图片
           name: product.goods_name,         // 商品名称
           price: product.goods_price        // 商品价格

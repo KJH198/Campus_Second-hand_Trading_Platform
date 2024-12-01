@@ -19,6 +19,7 @@
             <div 
               v-show="dropdownVisible" 
               class="dropdown-menu"
+              @click.stop
             >
               <button @click="viewProfile">个人信息</button>
               <button @click="viewNotifications">我的通知</button>
@@ -110,7 +111,7 @@
 
       <!-- 商品描述 -->
       <div class="product-description">
-        <h2>品描述</h2>
+        <h2>商品描述</h2>
         <p>{{ goodsDescription }}</p>
       </div>
 
@@ -131,21 +132,78 @@
         <!-- 评论列表 -->
         <div class="comments-list">
           <div v-for="comment in comments" 
-               :key="comment.id" 
+               :key="comment.comment_time" 
                class="comment-item"
           >
-            <div class="comment-user">
-              <img :src="comment.userAvatar" :alt="comment.userName" />
-              <span class="user-name">{{ comment.userName }}</span>
-              <span class="comment-time">{{ comment.time }}</span>
+            <!-- 主评论 -->
+            <div class="comment-main">
+              <div class="comment-user">
+                <img :src="comment.deliver_picture" :alt="comment.deliver_name" />
+                <span class="user-name">{{ comment.deliver_name }}</span>
+                <span class="comment-time">{{ comment.comment_time }}</span>
+              </div>
+              <div class="comment-content">{{ comment.comment }}</div>
+              <div class="comment-actions">
+                <button 
+                  class="action-btn like-btn" 
+                  :class="{ 'active': getCommentAction(comment) === 'like' }"
+                  @click="handleLike(comment)"
+                >
+                  <i class="fas fa-thumbs-up thumb-icon"></i>
+                  <span class="count">{{ comment.helpful }}</span>
+                </button>
+                <button 
+                  class="action-btn dislike-btn" 
+                  :class="{ 'active': getCommentAction(comment) === 'dislike' }"
+                  @click="handleDislike(comment)"
+                >
+                  <i class="fas fa-thumbs-down thumb-icon"></i>
+                  <span class="count">{{ comment.unhelpfule }}</span>
+                </button>
+                <button class="reply-btn" @click="handleReply(comment)">
+                  回复
+                </button>
+              </div>
             </div>
-            <div class="comment-content">{{ comment.content }}</div>
+
+            <!-- 回复列表 -->
+            <div v-if="comment.reply && comment.reply.length > 0" class="reply-list">
+              <div v-for="reply in comment.reply" 
+                   :key="reply.comment_time" 
+                   class="reply-item"
+              >
+                <div class="comment-user">
+                  <img :src="reply.deliver_picture" :alt="reply.deliver_name" />
+                  <span class="user-name">{{ reply.deliver_name }}</span>
+                  <span class="comment-time">{{ reply.comment_time }}</span>
+                </div>
+                <div class="comment-content">{{ reply.comment }}</div>
+                <div class="comment-actions">
+                  <button 
+                    class="action-btn like-btn" 
+                    :class="{ 'active': getCommentAction(reply) === 'like' }"
+                    @click="handleLike(reply)"
+                  >
+                    <i class="fas fa-thumbs-up thumb-icon"></i>
+                    <span class="count">{{ reply.helpful }}</span>
+                  </button>
+                  <button 
+                    class="action-btn dislike-btn" 
+                    :class="{ 'active': getCommentAction(reply) === 'dislike' }"
+                    @click="handleDislike(reply)"
+                  >
+                    <i class="fas fa-thumbs-down thumb-icon"></i>
+                    <span class="count">{{ reply.unhelpfule }}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </main>
 
-    <!-- 公告弹窗 -->
+    <!-- 公弹窗 -->
     <el-dialog
       v-model="showAnnouncementDialog"
       title="系统公告"
@@ -166,7 +224,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import defaultAvatar from '@/assets/tubiao.png';
 import lanqiuImage from '@/assets/lanqiu.png';
@@ -174,9 +232,18 @@ import xuexiImage from '@/assets/xuexi.png';
 import shumaImage from '@/assets/shuma.png';
 import yiwuImage from '@/assets/yifu.png';
 import qitaImage from '@/assets/qita.png';
-import { Bell, ArrowLeft, ArrowRight, Star, Calendar, Phone } from '@element-plus/icons-vue';
+import { 
+  Bell, 
+  ArrowLeft, 
+  ArrowRight, 
+  Star, 
+  Calendar, 
+  Phone, 
+  Position     // 使用 Position 图标来模拟拇指
+} from '@element-plus/icons-vue';
 import { ElIcon } from 'element-plus';
 import { ElDialog } from 'element-plus';
+import { ElMessage } from 'element-plus';
 
 export default {
   name: 'GoodDetails',
@@ -189,6 +256,7 @@ export default {
     Calendar,
     Phone,
     ElDialog,
+    Position    // 注册 Position 组件
   },
   setup() {
     const route = useRoute();
@@ -208,6 +276,7 @@ export default {
     const beginTime = ref('');
     const newComment = ref('');
     const comments = ref([]);
+    const commentActions = ref(new Map()); // 用于存储用户对每条评论的操作状态
 
     // 获取用户头像
     async function fetchUserAvatar() {
@@ -288,7 +357,7 @@ export default {
       }
     }
 
-    // 获取评论
+    // 获取评论函数
     async function fetchComments() {
       try {
         const response = await fetch("/goods_detail", {
@@ -302,38 +371,102 @@ export default {
           })
         });
         
-        if (!response.ok) throw new Error('Failed to fetch comments');
+        if (!response.ok) {
+          throw new Error('Failed to fetch comments');
+        }
         
         const data = await response.json();
-        comments.value = data.comments;
+        
+        // 处理评论数据中的头像
+        const processedComments = data.map(comment => {
+          // 处理一级评论头像
+          const processedComment = {
+            ...comment,
+            deliver_picture: comment.deliver_picture ? 
+              URL.createObjectURL(base64ToBlob(comment.deliver_picture)) : 
+              defaultAvatar
+          };
+
+          // 处理二级评论头像
+          if (comment.reply && Array.isArray(comment.reply)) {
+            processedComment.reply = comment.reply.map(reply => ({
+              ...reply,
+              deliver_picture: reply.deliver_picture ? 
+                URL.createObjectURL(base64ToBlob(reply.deliver_picture)) : 
+                defaultAvatar
+            }));
+          }
+
+          return processedComment;
+        });
+
+        comments.value = processedComments;
+        
       } catch (error) {
         console.error('Error fetching comments:', error);
+        // 设置默认评论数据用于测试
+        comments.value = [
+          {
+            comment: "这是一条测试评论",
+            goods_comment_id: 1,
+            comment_time: "2024-03-20 10:00",
+            helpful: 12,
+            unhelpfule: 3,
+            deliver_name: "测试用户1",
+            deliver_picture: defaultAvatar,
+            reply: [
+              {
+                comment: "这是一条回复",
+                second_goods_comment_id: 1,
+                comment_time: "2024-03-20 10:30",
+                helpful: 5,
+                unhelpfule: 1,
+                deliver_name: "测试用户2",
+                deliver_picture: defaultAvatar
+              }
+            ]
+          }
+        ];
       }
     }
 
     // 提交评论
     async function submitComment() {
-      if (!newComment.value.trim()) return;
+      if (!newComment.value.trim()) {
+        ElMessage.warning('评论内容不能为空');
+        return;
+      }
       
       try {
         const response = await fetch("/goods_detail", {
           method: "POST",
           headers: {
             'Content-Type': 'application/json',
-            'type': 'add_comment'
+            'type': 'commit_comment'
           },
           body: JSON.stringify({
             goods_id: route.params.productId,
-            content: newComment.value
+            comment: newComment.value,
+            deliver_id: route.query.current_user_id
           })
         });
         
-        if (!response.ok) throw new Error('Failed to submit comment');
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
         
-        await fetchComments(); // 重新获取评论列表
-        newComment.value = ''; // 清空输入框
+        if (data.success) {
+          ElMessage.success('评论发表成功！');
+          await fetchComments(); // 重新获取评论列表
+          newComment.value = ''; // 清空入框
+        } else {
+          ElMessage.error('评论发表失败请重试');
+        }
       } catch (error) {
         console.error('Error submitting comment:', error);
+        ElMessage.error('评论发表失败，请稍后重试');
       }
     }
 
@@ -363,7 +496,7 @@ export default {
       }
     }
 
-    // 在 setup() 函数中添加获取商品详情的函数
+    // 在 setup() 函数中添加获取商品情函数
     async function fetchGoodsDetail() {
       // console.log("开始获取商品详情");
       try {
@@ -385,7 +518,7 @@ export default {
         }
 
         const data = await response.json();
-        console.log("获取到的商品详情数据：", data);
+        console.log("获取到商品详情数：", data);
 
         // 处理卖家头像
         if (data.seller_picture) {
@@ -408,7 +541,7 @@ export default {
         beginTime.value = data.begin_time;
 
       } catch (error) {
-        console.log("进入错误处理分支");
+        console.log("进入���误处理分支");
         console.error('Error fetching goods detail:', error);
         console.log("开始设置默认数据");
         
@@ -426,11 +559,11 @@ export default {
         // 设置其他默认数据
         goodsName.value = route.query.name || '测试商品';
         goodsPrice.value = route.query.price || '99.99';
-        goodsDescription.value = '这是一个测试商品描述，用于调试多图片展示效果。';
+        goodsDescription.value = '这一个是测试商品描述，用于调试多图片示效果。';
         sellerName.value = '测试卖家';
         sellerPicture.value = defaultAvatar;
         
-        // 生成随机热度（50-1000之间）
+        // 生成机热度（50-1000之间）
         heat.value = Math.floor(Math.random() * 951) + 50;
         console.log("默认热度值:", heat.value);
         
@@ -507,6 +640,119 @@ export default {
       }
     }
 
+    // 获取评论的操作状态
+    function getCommentAction(comment) {
+      const isFirstLevel = 'goods_comment_id' in comment;
+      const commentId = isFirstLevel ? comment.goods_comment_id : comment.second_goods_comment_id;
+      return commentActions.value.get(commentId) || null;
+    }
+
+    // 修改后的点赞函数
+    async function handleLike(comment) {
+      const isFirstLevel = 'goods_comment_id' in comment;
+      const commentId = isFirstLevel ? comment.goods_comment_id : comment.second_goods_comment_id;
+      const currentAction = commentActions.value.get(commentId);
+
+      // 如果已经点赞，不允许重复操作
+      if (currentAction === 'like') {
+        ElMessage.warning('您已经点过赞了');
+        return;
+      }
+
+      // 如果已经点踩，不允许点赞
+      if (currentAction === 'dislike') {
+        ElMessage.warning('您已经点过踩了，不能再点赞');
+        return;
+      }
+
+      try {
+        const response = await fetch("/goods_detail", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'like'
+          },
+          body: JSON.stringify({
+            like: true,
+            level: isFirstLevel ? 1 : 2,
+            id: commentId
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          comment.helpful += 1;
+          // 记录用户的点赞操作
+          commentActions.value.set(commentId, 'like');
+          ElMessage.success('点赞成功');
+        } else {
+          ElMessage.error('点赞失败');
+        }
+      } catch (error) {
+        console.error('Error handling like:', error);
+        ElMessage.error('操作失败，请稍后重试');
+      }
+    }
+
+    // 修改后的点踩函数
+    async function handleDislike(comment) {
+      const isFirstLevel = 'goods_comment_id' in comment;
+      const commentId = isFirstLevel ? comment.goods_comment_id : comment.second_goods_comment_id;
+      const currentAction = commentActions.value.get(commentId);
+
+      // 如果已经点踩，不允许重复操作
+      if (currentAction === 'dislike') {
+        ElMessage.warning('您已经点过踩了');
+        return;
+      }
+
+      // 如果已经点赞，不允许点踩
+      if (currentAction === 'like') {
+        ElMessage.warning('您已经点过赞了，不能再点踩');
+        return;
+      }
+
+      try {
+        const response = await fetch("/goods_detail", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'like'
+          },
+          body: JSON.stringify({
+            like: false,
+            level: isFirstLevel ? 1 : 2,
+            id: commentId
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          comment.unhelpfule += 1;
+          // 记录用户的点踩操作
+          commentActions.value.set(commentId, 'dislike');
+          ElMessage.success('点踩成功');
+        } else {
+          ElMessage.error('点踩失败');
+        }
+      } catch (error) {
+        console.error('Error handling dislike:', error);
+        ElMessage.error('操作失败，请稍后重试');
+      }
+    }
+
+    function handleReply(comment) {
+      console.log('回复', comment);
+    }
+
     onMounted(() => {
       // console.log("组件已挂载");
       fetchUserAvatar();
@@ -514,6 +760,10 @@ export default {
       console.log("开始调用 fetchGoodsDetail");
       fetchGoodsDetail();
       fetchComments();
+    });
+
+    onUnmounted(() => {
+      document.removeEventListener('click', closeDropdown);
     });
 
     return {
@@ -545,6 +795,10 @@ export default {
       contactSeller,
       toggleFavorite,
       formatDate,
+      handleLike,
+      handleDislike,
+      handleReply,
+      getCommentAction,
     };
   }
 };
@@ -616,6 +870,7 @@ export default {
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid #fff;
+  display: block;
 }
 
 .dropdown-menu {
@@ -629,6 +884,8 @@ export default {
   min-width: 150px;
   margin-top: 8px;
   border: 1px solid #eee;
+  z-index: 1001;
+  display: block;
 }
 
 .dropdown-menu button {
@@ -1028,5 +1285,147 @@ export default {
   border-radius: 12px;
   font-size: 14px;
   z-index: 2;
+}
+
+.comment-main {
+  padding: 15px;
+  background: #f8f8f8;
+  border-radius: 4px;
+}
+
+.comment-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  color: #ff5000;
+}
+
+.action-btn .count {
+  font-size: 12px;
+}
+
+.reply-list {
+  margin-left: 40px;
+  margin-top: 10px;
+  padding-left: 15px;
+  border-left: 2px solid #eee;
+}
+
+.reply-item {
+  margin-bottom: 15px;
+}
+
+.like-btn {
+  color: #666;  /* 默认颜色 */
+  transition: all 0.3s;
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+
+.like-btn:hover {
+  color: #67c23a;  /* 悬停时的绿色 */
+  background-color: rgba(103, 194, 58, 0.1);
+}
+
+.like-btn:hover .thumb-icon {
+  transform: scale(1.2);
+}
+
+.dislike-btn {
+  color: #666;  /* 默认颜色 */
+  transition: all 0.3s;
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+
+.dislike-btn:hover {
+  color: #f56c6c;  /* 悬停时的红色 */
+  background-color: rgba(245, 108, 108, 0.1);
+}
+
+.dislike-btn:hover .thumb-icon {
+  transform: scale(1.2);
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-btn .count {
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* 可以添加实心拇指的样式 */
+.action-btn.active .fa-thumbs-up,
+.action-btn.active .fa-thumbs-down {
+  font-weight: 900;  /* 使用实心图标 */
+}
+
+.thumb-icon {
+  font-size: 18px;
+  transition: transform 0.3s;
+}
+
+.reply-btn {
+  padding: 4px 8px;
+  border: none;
+  background: none;
+  color: #999;  /* 使用柔和的灰色 */
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.reply-btn:hover {
+  color: #ff5000;  /* 悬停时变为主题色 */
+  background-color: transparent;  /* 移除背景色 */
+}
+
+/* 移除可能存在的边框和阴影 */
+.reply-btn:focus {
+  outline: none;
+}
+
+.comment-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 8px;
+  align-items: center;  /* 确保所有按钮垂直对齐 */
+}
+
+.like-btn.active {
+  color: #67c23a !important;  /* 点赞后的绿色 */
+}
+
+.dislike-btn.active {
+  color: #f56c6c !important;  /* 点踩后的红色 */
+}
+
+.action-btn.active .thumb-icon {
+  transform: scale(1.2);
 }
 </style> 
