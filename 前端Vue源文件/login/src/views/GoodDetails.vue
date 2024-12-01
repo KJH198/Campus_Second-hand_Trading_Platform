@@ -161,7 +161,31 @@
                   <span class="count">{{ comment.unhelpfule }}</span>
                 </button>
                 <button class="reply-btn" @click="handleReply(comment)">
-                  回复
+                  {{ activeReplyId === comment.goods_comment_id ? '取消回复' : '回复' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- 添加回复输入框 -->
+            <div v-if="activeReplyId === comment.goods_comment_id" class="reply-input-container">
+              <textarea 
+                v-model="replyContent"
+                placeholder="写下你的回复..."
+                rows="2"
+                class="reply-textarea"
+              ></textarea>
+              <div class="reply-actions">
+                <button 
+                  class="cancel-btn" 
+                  @click="activeReplyId = null"
+                >
+                  取消
+                </button>
+                <button 
+                  class="submit-btn" 
+                  @click="submitReply(comment.goods_comment_id)"
+                >
+                  发送
                 </button>
               </div>
             </div>
@@ -203,7 +227,7 @@
       </div>
     </main>
 
-    <!-- 公弹窗 -->
+    <!-- 弹窗 -->
     <el-dialog
       v-model="showAnnouncementDialog"
       title="系统公告"
@@ -260,7 +284,7 @@ export default {
   },
   setup() {
     const route = useRoute();
-    const userAvatar = ref('');
+    const userAvatar = ref(route.query.userAvatar || defaultAvatar);
     const dropdownVisible = ref(false);
     const announcements = ref([]);
     const showAnnouncementDialog = ref(false);
@@ -278,30 +302,9 @@ export default {
     const comments = ref([]);
     const commentActions = ref(new Map()); // 用于存储用户对每条评论的操作状态
 
-    // 获取用户头像
-    async function fetchUserAvatar() {
-      try {
-        const response = await fetch("/home", {
-          method: "POST",
-          headers: {
-            'Content-Type': 'application/json',
-            'type': 'avatar'
-          },
-          body: JSON.stringify({
-            phone_number: route.query.phone_number
-          })
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch user avatar');
-        }
-        const data = await response.json();
-        userAvatar.value = data.userAvatar;
-      } catch (error) {
-        console.error("加载用户头像失败", error);
-        userAvatar.value = defaultAvatar;
-      }
-    }
+    // 添加回复相关的响应式变量
+    const activeReplyId = ref(null);  // 当前正在回复的评论ID
+    const replyContent = ref('');     // 回复内容
 
     // 下拉菜单相关函数
     function toggleDropdown() {
@@ -541,7 +544,7 @@ export default {
         beginTime.value = data.begin_time;
 
       } catch (error) {
-        console.log("进入���误处理分支");
+        console.log("进入误处理分支");
         console.error('Error fetching goods detail:', error);
         console.log("开始设置默认数据");
         
@@ -749,13 +752,63 @@ export default {
       }
     }
 
+    // 修改处理回复的函数
     function handleReply(comment) {
-      console.log('回复', comment);
+      // 如果点击的是当前已经打开的回复框，则关闭它
+      if (activeReplyId.value === comment.goods_comment_id) {
+        activeReplyId.value = null;
+        replyContent.value = '';
+      } else {
+        // 否则打开新的回复框
+        activeReplyId.value = comment.goods_comment_id;
+        replyContent.value = '';
+      }
+    }
+
+    // 添加提交回复的函数
+    async function submitReply(commentId) {
+      if (!replyContent.value.trim()) {
+        ElMessage.warning('回复内容不能为空');
+        return;
+      }
+
+      try {
+        const response = await fetch("/goods_detail", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'commit_reply'
+          },
+          body: JSON.stringify({
+            goods_comment_id: commentId,
+            second_goods_comment: replyContent.value,
+            deliver_id: route.query.current_user_id
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          ElMessage.success('回复成功');
+          // 清空回复框并关闭
+          replyContent.value = '';
+          activeReplyId.value = null;
+          // 重新获取评论列表
+          await fetchComments();
+        } else {
+          ElMessage.error('回复失败，请重试');
+        }
+      } catch (error) {
+        console.error('Error submitting reply:', error);
+        ElMessage.error('回复失败，请稍后重试');
+      }
     }
 
     onMounted(() => {
       // console.log("组件已挂载");
-      fetchUserAvatar();
       document.addEventListener('click', closeDropdown);
       console.log("开始调用 fetchGoodsDetail");
       fetchGoodsDetail();
@@ -799,6 +852,9 @@ export default {
       handleDislike,
       handleReply,
       getCommentAction,
+      activeReplyId,
+      replyContent,
+      submitReply,
     };
   }
 };
@@ -1427,5 +1483,55 @@ export default {
 
 .action-btn.active .thumb-icon {
   transform: scale(1.2);
+}
+
+.reply-input-container {
+  margin-top: 10px;
+  padding: 10px;
+  background: #fff;
+  border-radius: 4px;
+}
+
+.reply-textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: vertical;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.reply-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.cancel-btn {
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.submit-btn {
+  padding: 6px 16px;
+  border: none;
+  background: #ff5000;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.submit-btn:hover {
+  background: #ff6a00;
+}
+
+.cancel-btn:hover {
+  color: #666;
 }
 </style> 
