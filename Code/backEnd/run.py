@@ -9,8 +9,6 @@ from flask import request,render_template,jsonify, send_file, send_from_director
 
 @app.route('/', methods=['GET','POST'])
 def login():
-    #print('login')
-    #print(os.getcwd())
     if request.method == 'GET':
         return render_template('index.html')
     
@@ -28,20 +26,18 @@ def login():
             # addGoods(1,[b],"goods_name","category_name","goods_price","goods_description")
             return jsonify(dbTools.loginJudge(data.get('phone_number'),data.get('password')))    
     elif type == 'register':
-        print(data)
         return jsonify({"success":dbTools.register(data.get('user_name'),data.get('phone_number'),data.get('password'))})    
 
 
 @app.route('/home', methods=['GET','POST'])
 def home():
-    #print(os.getcwd())
     if request.method == 'GET':
         return jsonify({"goods":dbTools.getUnselledGoods(160)})
     
     type = request.headers.get('type')
     data = request.get_json()
     if type == 'user_picture':
-        picture_url = getUserPicture(data.get("phone_number"))      #本地图像路径
+        picture_url = getUserPicture(data.get("user_id"))      #本地图像路径
         type = get_type(picture_url)
         return send_file(picture_url, type)
     elif type == 'search':
@@ -52,16 +48,6 @@ def home():
         return jsonify({"announcements":dbTools.getAnnouncement()})
     else:
         return jsonify({"error":"Unexpected error in /home"})
-
-##unused yet
-@app.route('/picture/<image_name>', methods=['GET'])
-def get_image(image_name):
-    # 替换为服务器端存放照片的的绝对路径或云服务器端的http路径
-    image_path = os.path.join("C:\\Users\\kjh15\\Desktop\\Project\\Campus_Second-hand_Trading_Platform\\Code\\picture",image_name)
-    if not os.path.exists(image_path):
-        return jsonify({'error':'Image nor found'})
-    type = get_type(image_name)         # 获取图片类型
-    return send_file(image_path,type)   # 发送图片文件
     
 def get_type(filename):
     # 根据文件扩展名返回对应的 MIME 类型
