@@ -271,16 +271,23 @@ export default {
 
     // 修改跳转商品页函数
     function goToDetails(product) {
+      console.log('跳转商品详情，商品数据：', product);
       router.push({
-        name: 'GoodDetails',  // 修改为正确的路由名称，与 router/index.js 保持一致
+        name: 'GoodDetails',  // 对应 router/index.js 中的路由名称
         params: { 
-          productId: product.goods_id
+          productId: product.goods_id  // 路由参数
         },
         query: { 
-          picture: product.picture,  // 改为 picture
-          name: product.goods_name,
-          price: product.goods_price
+          phone_number: phone_number.value,  // 添加电话号码
+          user_id: user_id.value,           // 添加用户ID
+          picture: product.picture,         // 商品图片
+          name: product.goods_name,         // 商品名称
+          price: product.goods_price        // 商品价格
         }
+      }).then(() => {
+        console.log('跳转成功');
+      }).catch(err => {
+        console.error('跳转失败：', err);
       });
     }
 
