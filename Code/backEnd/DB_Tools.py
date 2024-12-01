@@ -161,10 +161,8 @@ def getUnselledGoods(num):
                 picture_byte_stream = file.read()
             base64_str = base64.b64encode(picture_byte_stream).decode("ascii")
             pictures_byte_stream_list.append(base64_str)
-        #data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_list})
         if (len(pictures_byte_stream_list) != 0):
             data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_byte_stream_list[0]})
-        #data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_byte_stream_list[0]})
         num -= 1
     return data
     
