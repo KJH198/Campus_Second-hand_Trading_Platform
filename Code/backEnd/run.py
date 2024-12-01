@@ -23,10 +23,10 @@ def login():
             # with open('0.jpg','rb') as file:
             #     b = file.read()
             # addGoods(1,[b],"goods_name","category_name","goods_price","goods_description")
-            return jsonify({"success":dbTools.loginJudge(data.get('phone_number'),data.get('password'))})    
+            return jsonify(dbTools.loginJudge(data.get('phone_number'),data.get('password')))    
     elif type == 'register':
         return jsonify({"success":dbTools.register(data.get('user_name'),data.get('phone_number'),data.get('password'))})    
-    
+
 
 @app.route('/home', methods=['GET','POST'])
 def home():
