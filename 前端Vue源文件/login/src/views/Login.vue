@@ -6,12 +6,30 @@
         <div class="title">欢迎<b>回来</b></div>
         <div class="subtitle">登录你的账户</div>
         <div class="inputf">
-          <input type="text" placeholder="电话号码" name="phoneNumber"/>
-          <span class="label">电话号码</span>
+          <input 
+            type="text" 
+            :placeholder="isManager ? '管理员账户' : '电话号码'" 
+            name="phoneNumber"
+            :class="{ 'error': inputErrors.phoneNumber }"
+          />
+          <span class="label">{{ isManager ? '管理员账户' : '电话号码' }}</span>
         </div>
         <div class="inputf">
-          <input type="text" placeholder="密码" name="password"/>
+          <input 
+            type="text" 
+            placeholder="密码" 
+            name="password"
+            :class="{ 'error': inputErrors.password }"
+          />
           <span class="label">密码</span>
+        </div>
+        <div class="user-type">
+          <label>
+            <input 
+              type="checkbox" 
+              @change="handleUserTypeChange"
+            /> 管理员登录
+          </label>
         </div>
         <button type="submit" id="signinbutton">登录</button>
       </div>
@@ -40,89 +58,161 @@
           <div class="desc">高效便捷的校园二手交易平台，让闲置物品焕发新生，轻松买卖，快乐分享！</div>
           <div class="btn">
             新用户 ?
-            <button @click="active = (active === 1) ? 2 : 1">去注册</button>
+            <button @click="togglecard">{{ cardbutton }}</button>
           </div>
         </div>
       </div></div>
   </div>
 </template>
-<script setup>
+<script>
 import {onMounted, ref} from "vue";
-const active = ref(1);
-const handlelog = async () => {
-  const phone_number = document.querySelector('input[name="phoneNumber"]').value;
-  const password = document.querySelector('input[name="password"]').value;
+import { useRouter } from 'vue-router';
 
-  try {
-    const response = await fetch("/", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'type':'login'
-      },
-      body: JSON.stringify({phone_number, password}),
+export default {
+  name: "Login",
+  setup() {
+    let active = ref(1);
+    let cardbutton = "去注册";
+    const router = useRouter();
+    const isManager = ref(false);
+    const inputErrors = ref({
+      phoneNumber: false,
+      password: false
     });
-    const data = await response.json();
-    const success = data.success;
 
-    if (success) {
-      alert("登录成功")
-    } else {
-      alert("登录失败")
+    function togglecard  ()  {
+        this.active = (this.active === 1) ? 2 : 1;
+      this.cardbutton = (this.cardbutton === "去注册") ? "去登录":"去注册";
     }
-  } catch (error) {
-    console.error('Error during log:', error);
-  }
-};
-const handleregister = async () => {
-  const user_name = document.querySelector('input[name="username"]').value;
-  const password = document.querySelector('input[name="loginpassword"]').value;
-  const phone_number = document.querySelector('input[name="phone"]').value;
-  console.log(password);
-  try {
-    const response = await fetch("/", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'type':'register'
-      },
-      body: JSON.stringify({user_name, password,phone_number}),
-    });
-
-    const data = await response.json();
-    const success = data.success;
-    // console.log(success)
-    if (success) {
-    alert("注册成功")
-    } else {
-      // console.error('sign up failed:', data.message);
-      alert("注册失败")
+    function handleUserTypeChange(event) {
+      isManager.value = event.target.checked;
     }
-  } catch (error) {
-    console.error('Error during log:', error);
-    alert("发生了意想不到的错误")
-  }
-};
+    const handlelog =  async  () => {
+      const inputValue = document.querySelector('input[name="phoneNumber"]').value;
+      const password = document.querySelector('input[name="password"]').value;
 
-onMounted(() => {
-  const signinButton = document.getElementById("signinbutton");
-  const signupButton = document.getElementById("signupbutton")
-  if(signupButton){
-    signupButton.addEventListener('click',(event) => {
-      event.preventDefault();
-      handleregister()
-    })
-  }
-  if (signinButton) {
-    signinButton.addEventListener('click', (event) => {
-      event.preventDefault();
-      handlelog();
+      // 验证输入
+      inputErrors.value.phoneNumber = !inputValue;
+      inputErrors.value.password = !password;
+
+      // 如果有空值，不继续提交
+      if (!inputValue || !password) {
+        return;
+      }
+
+      try {
+        const response = await fetch("/", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'login'
+          },
+          body: JSON.stringify(
+            isManager.value ? 
+            {
+              manager_name: inputValue,  // 管理员使用账户名
+              password,
+              isManager: isManager.value
+            } : 
+            {
+              phone_number: inputValue,  // 普通用户使用手机号
+              password,
+              isManager: isManager.value
+            }
+          ),
+        });
+        const data = await response.json();
+        const success = data.success;
+        console.log(data.user_id);
+        if (success) {
+          alert("登录成功")
+
+          if(isManager.value){
+            await router.push({
+              path: '/info_page',
+              query: {
+                manager_name: inputValue,
+                isManager: isManager.value,
+                user_id:data.user_id
+              }
+            });
+          } else {
+            await router.push({
+              path: '/home',
+              query: {
+                phone_number: inputValue,
+                isManager: isManager.value,
+                user_id:data.user_id
+              }
+            });
+
+          }
+
+        } else {
+          alert("登录失败")
+        }
+        } catch (error) {
+          console.error('Error during log:', error);
+        }
+      }
+    const handleregister = async ()=>  {
+      const user_name = document.querySelector('input[name="username"]').value;
+      const password = document.querySelector('input[name="loginpassword"]').value;
+      const phone_number = document.querySelector('input[name="phone"]').value;
+      console.log(password);
+      try {
+        const response = await fetch("/", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'register'
+          },
+          body: JSON.stringify({user_name, password, phone_number}),
+        });
+
+        const data = await response.json();
+        const success = data.success;
+        // console.log(success)
+        if (success) {
+          alert("注册成功")
+        } else {
+          // console.error('sign up failed:', data.message);
+          alert("注册失败")
+        }
+      } catch (error) {
+        console.error('Error during log:', error);
+        alert("发生了意想不到的错误")
+      }
+    }
+    onMounted(() => {
+      const signinButton = document.getElementById("signinbutton");
+      const signupButton = document.getElementById("signupbutton")
+      if(signupButton){
+        signupButton.addEventListener('click',(event) => {
+          event.preventDefault();
+          handleregister();
+        })
+      }
+      if (signinButton) {
+        signinButton.addEventListener('click', (event) => {
+          event.preventDefault();
+          handlelog();
+        });
+      }
     });
-  }
-});
 
-
-
+    return{
+      active,
+      cardbutton,
+      handlelog,
+      handleregister,
+      togglecard,
+      handleUserTypeChange,
+      isManager,
+      inputErrors,
+    };
+  },
+};
 </script>
 <style lang="scss">
 .login-container{
@@ -187,6 +277,10 @@ onMounted(() => {
           font-size: 12px;
           padding: 0 15px;
           color:rgb(246,240,255);
+          transition: outline-color 0.3s;
+          &.error {
+            outline-color: #ff4444;
+          }
           &::placeholder{
             color: rgb(175,180,190);
           }
@@ -201,7 +295,8 @@ onMounted(() => {
             }
           }
           &:not(:placeholder-shown) + .label{
-            border: red 1px solid;
+            opacity: 1;
+            top: -20px;
           }
         }
         .label{
@@ -279,6 +374,23 @@ onMounted(() => {
         }
       }
     }
+  }
+}
+.user-type {
+  display: flex;
+  margin-bottom: 20px;
+  color: rgb(246,240,255);
+  font-size: 14px;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+  }
+
+  input[type="checkbox"] {
+    cursor: pointer;
   }
 }
 </style>
