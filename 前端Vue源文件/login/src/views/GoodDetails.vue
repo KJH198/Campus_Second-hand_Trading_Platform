@@ -465,7 +465,7 @@ export default {
           await fetchComments(); // 重新获取评论列表
           newComment.value = ''; // 清空入框
         } else {
-          ElMessage.error('���论发表失败重试');
+          ElMessage.error('论发表失败重试');
         }
       } catch (error) {
         console.error('Error submitting comment:', error);
@@ -650,24 +650,55 @@ export default {
       return commentActions.value.get(commentId) || null;
     }
 
-    // 修改后的点赞函数
+    // 修改点赞函数
     async function handleLike(comment) {
       const isFirstLevel = 'goods_comment_id' in comment;
       const commentId = isFirstLevel ? comment.goods_comment_id : comment.second_goods_comment_id;
       const currentAction = commentActions.value.get(commentId);
 
-      // 如果已经点赞，不允许重复操作
+      // 如果已经点赞，这次是取消点赞
       if (currentAction === 'like') {
-        ElMessage.warning('您已经点过赞了');
+        try {
+          const response = await fetch("/goods_detail", {
+            method: "POST",
+            headers: {
+              'Content-Type': 'application/json',
+              'type': 'like'
+            },
+            body: JSON.stringify({
+              like: true,
+              level: isFirstLevel ? 1 : 2,
+              id: commentId,
+              cancel: true  // 添加取消操作标记
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+
+          const data = await response.json();
+          if (data.success) {
+            comment.helpful -= 1;  // 减少点赞数
+            commentActions.value.delete(commentId);  // 删除操作状态
+            ElMessage.success('已取消点赞');
+          } else {
+            ElMessage.error('操作失败');
+          }
+        } catch (error) {
+          console.error('Error handling like:', error);
+          ElMessage.error('操作失败，请稍后重试');
+        }
         return;
       }
 
       // 如果已经点踩，不允许点赞
       if (currentAction === 'dislike') {
-        ElMessage.warning('您已经点过踩了，不能再点赞');
+        ElMessage.warning('您已经点过踩了，如需点赞请先取消点踩');
         return;
       }
 
+      // 正常点赞操作
       try {
         const response = await fetch("/goods_detail", {
           method: "POST",
@@ -678,7 +709,8 @@ export default {
           body: JSON.stringify({
             like: true,
             level: isFirstLevel ? 1 : 2,
-            id: commentId
+            id: commentId,
+            cancel: false  // 添加正常操作标记
           })
         });
 
@@ -687,10 +719,8 @@ export default {
         }
 
         const data = await response.json();
-        console.log(data.success);
         if (data.success) {
           comment.helpful += 1;
-          // 记录用户的点赞操作
           commentActions.value.set(commentId, 'like');
           ElMessage.success('点赞成功');
         } else {
@@ -702,24 +732,55 @@ export default {
       }
     }
 
-    // 修改后的点踩函数
+    // 修改点踩函数
     async function handleDislike(comment) {
       const isFirstLevel = 'goods_comment_id' in comment;
       const commentId = isFirstLevel ? comment.goods_comment_id : comment.second_goods_comment_id;
       const currentAction = commentActions.value.get(commentId);
 
-      // 如果已经点踩，不允许重复操作
+      // 如果已经点踩，这次是取消点踩
       if (currentAction === 'dislike') {
-        ElMessage.warning('您已经点过踩了');
+        try {
+          const response = await fetch("/goods_detail", {
+            method: "POST",
+            headers: {
+              'Content-Type': 'application/json',
+              'type': 'like'
+            },
+            body: JSON.stringify({
+              like: false,
+              level: isFirstLevel ? 1 : 2,
+              id: commentId,
+              cancel: true  // 添加取消操作标记
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+
+          const data = await response.json();
+          if (data.success) {
+            comment.unhelpful -= 1;  // 减少点踩数
+            commentActions.value.delete(commentId);  // 删除操作状态
+            ElMessage.success('已取消点踩');
+          } else {
+            ElMessage.error('操作失败');
+          }
+        } catch (error) {
+          console.error('Error handling dislike:', error);
+          ElMessage.error('操作失败，请稍后重试');
+        }
         return;
       }
 
       // 如果已经点赞，不允许点踩
       if (currentAction === 'like') {
-        ElMessage.warning('您已经点过赞了，不能再点踩');
+        ElMessage.warning('您已经点过赞了，如需点踩请先取消点赞');
         return;
       }
 
+      // 正常点踩操作
       try {
         const response = await fetch("/goods_detail", {
           method: "POST",
@@ -730,7 +791,8 @@ export default {
           body: JSON.stringify({
             like: false,
             level: isFirstLevel ? 1 : 2,
-            id: commentId
+            id: commentId,
+            cancel: false  // 添加正常操作标记
           })
         });
 
@@ -741,7 +803,6 @@ export default {
         const data = await response.json();
         if (data.success) {
           comment.unhelpful += 1;
-          // 记录用户的点踩操作
           commentActions.value.set(commentId, 'dislike');
           ElMessage.success('点踩成功');
         } else {
