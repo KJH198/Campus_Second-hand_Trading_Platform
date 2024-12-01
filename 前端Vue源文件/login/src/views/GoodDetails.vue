@@ -52,9 +52,8 @@
             :alt="goodsName" 
           />
           
-          <div style="position: absolute; top: 0; left: 0; background: rgba(0,0,0,0.5); color: white; padding: 5px;">
-            图片数量: {{ goodsPictures.length }}
-            当前索引: {{ currentImageIndex }}
+          <div v-if="goodsPictures.length > 1" class="image-counter">
+            {{ currentImageIndex + 1 }}/{{ goodsPictures.length }}
           </div>
           
           <button 
@@ -213,7 +212,7 @@ export default {
     // 获取用户头像
     async function fetchUserAvatar() {
       try {
-        const response = await fetch("/goods_detail", {
+        const response = await fetch("/home", {
           method: "POST",
           headers: {
             'Content-Type': 'application/json',
@@ -283,7 +282,7 @@ export default {
       } catch (error) {
         console.error("获取公告失败", error);
         announcements.value = [
-          { id: 1, title: "系统提示", content: "暂时没有新���公告", date: new Date().toLocaleDateString() }
+          { id: 1, title: "系统提示", content: "暂时没有新公告", date: new Date().toLocaleDateString() }
         ];
         showAnnouncementDialog.value = true;
       }
@@ -366,7 +365,7 @@ export default {
 
     // 在 setup() 函数中添加获取商品详情的函数
     async function fetchGoodsDetail() {
-      console.log("开始获取商品详情");
+      // console.log("开始获取商品详情");
       try {
         console.log("发送请求，商品ID:", route.params.productId);
         const response = await fetch("/goods_detail", {
@@ -509,7 +508,7 @@ export default {
     }
 
     onMounted(() => {
-      console.log("组件已挂载");
+      // console.log("组件已挂载");
       fetchUserAvatar();
       document.addEventListener('click', closeDropdown);
       console.log("开始调用 fetchGoodsDetail");
@@ -1017,5 +1016,17 @@ export default {
 .comment-content {
   color: #333;
   line-height: 1.5;
+}
+
+.image-counter {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 12px;
+  font-size: 14px;
+  z-index: 2;
 }
 </style> 
