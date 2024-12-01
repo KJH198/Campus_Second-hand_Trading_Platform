@@ -1,6 +1,7 @@
 import random
 from backEnd.DB_Initiator import db,User,Manager,Log,Address,Goods,Order,Message,OrderComment,SecondaryOrderComment,GoodsConsultation,GoodsConsultationReply,Collection,Accusation,Announcement,Picture
 from datetime import datetime
+import base64
 
 urlCnt = 0
 
@@ -151,7 +152,17 @@ def getUnselledGoods(num):
         goods_price = randGoods.goods_price
         first_picture = Picture.query.filter_by(goods_id = goods_id).first() # 只获取第一个图片
         pictures_list = [first_picture.picture_url]
-        data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_list})
+        pictures_byte_stream_list = []
+        for picture_url in pictures_list:
+            with open(picture_url,'rb') as file:
+                picture_byte_stream = file.read()
+            base64_str = base64.b64encode(picture_byte_stream).decode("ascii")
+            pictures_byte_stream_list.append(base64_str)
+        #data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_list})
+        print(pictures_byte_stream_list)
+        if (len(pictures_byte_stream_list) != 0):
+            data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_byte_stream_list[0]})
+        #data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_byte_stream_list[0]})
         num -= 1
     return data
     

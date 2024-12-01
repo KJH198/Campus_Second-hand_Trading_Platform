@@ -1,13 +1,16 @@
 import os
+
 import backEnd.DB_Initiator as DB_Initiator
 from backEnd.DB_Initiator import app
 import backEnd.DB_Tools as dbTools
 from backEnd.DB_Tools import getUserPicture
-from flask import request,render_template,jsonify, send_file
+from flask import request,render_template,jsonify, send_file, send_from_directory
 
 
 @app.route('/', methods=['GET','POST'])
 def login():
+    #print('login')
+    #print(os.getcwd())
     if request.method == 'GET':
         return render_template('index.html')
     
@@ -17,33 +20,40 @@ def login():
         if (data.get("isManager")) :
             return jsonify({"success":dbTools.mangerLoginJudge(data.get('manager_name'),data.get('password'))})    
         else:
-            # with open('1.jpg','rb') as file:  # 在第一次登录后再注释掉
+            # with open('backEnd\\uploads\\1.jpg','rb') as file:  # 在第一次登录后再注释掉
             #     a = file.read()
-            # reDefineUser({"user_id":1,"picture":a,"pictureName":".jpg"})
-            # with open('0.jpg','rb') as file:
+            # dbTools.reDefineUser({"user_id":1,"picture":a})
+            # with open('Code\\backEnd\\uploads\\0.jpg','rb') as file:
             #     b = file.read()
             # addGoods(1,[b],"goods_name","category_name","goods_price","goods_description")
             return jsonify(dbTools.loginJudge(data.get('phone_number'),data.get('password')))    
     elif type == 'register':
+        print(data)
         return jsonify({"success":dbTools.register(data.get('user_name'),data.get('phone_number'),data.get('password'))})    
 
 
 @app.route('/home', methods=['GET','POST'])
 def home():
+    #print(os.getcwd())
     if request.method == 'GET':
         return jsonify({"goods":dbTools.getUnselledGoods(160)})
     
     type = request.headers.get('type')
     data = request.get_json()
     if type == 'user_picture':
-        return jsonify({"picture_url":getUserPicture(data.get("phone_number"))})
+        picture_url = getUserPicture(data.get("phone_number"))      #本地图像路径
+        type = get_type(picture_url)
+        return send_file(picture_url, type)
     elif type == 'search':
         return jsonify({"goods":dbTools.searchGoods(data.get("query"))})
     elif type == 'category_search':
         return jsonify({"goods":dbTools.searchGoodsCategory(data.get("category_name"))})
     elif type == 'announcement':
         return jsonify({"announcements":dbTools.getAnnouncement()})
+    else:
+        return jsonify({"error":"Unexpected error in /home"})
 
+##unused yet
 @app.route('/picture/<image_name>', methods=['GET'])
 def get_image(image_name):
     # 替换为服务器端存放照片的的绝对路径或云服务器端的http路径
