@@ -170,6 +170,7 @@ export default {
         }
         const data = await response.json();
         products = data.products;
+        filteredProducts.value = products.value;
         console.log("搜索结果", data);
       } catch (error) {
         console.error("搜索失败", error);
