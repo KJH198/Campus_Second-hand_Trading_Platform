@@ -34,6 +34,7 @@ export default {
     const router = useRouter();
     const currentPage = ref(1);
     const pageSize = 16;  // 每页显示16个商品
+    const noResultsMessage = ref('');
 
     function base64ToBlob(base64) {
       var byteCharacters = atob(base64);
@@ -151,6 +152,7 @@ export default {
     async function handleSearch() {
       if (!searchQuery.value.trim()) {
         filteredProducts.value = products.value;
+        noResultsMessage.value = '';
         return;
       }
       try {
@@ -169,11 +171,20 @@ export default {
           throw new Error('Failed to fetch search results');
         }
         const data = await response.json();
-        products = data.products;
-        filteredProducts.value = products.value;
+        
+        // 检查返回的商品数组是否为空
+        if (!data.goods || data.goods.length === 0) {
+          filteredProducts.value = [];
+          noResultsMessage.value = '抱歉，找不到符合您描述要求的商品';
+        } else {
+          products.value = data.goods;
+          filteredProducts.value = data.goods;
+          noResultsMessage.value = '';
+        }
         console.log("搜索结果", data);
       } catch (error) {
         console.error("搜索失败", error);
+        noResultsMessage.value = '搜索失败，请稍后重试';
       }
     }
 
@@ -341,6 +352,7 @@ export default {
       announcements,
       showAnnouncementDialog,
       fetchAnnouncements,
+      noResultsMessage,
     };
   },
 };
@@ -402,7 +414,11 @@ export default {
       </div>
 
       <section class="product-grid">
+        <div v-if="noResultsMessage" class="no-results-message">
+          {{ noResultsMessage }}
+        </div>
         <div 
+          v-else
           v-for="product in paginatedProducts" 
           :key="product.goods_id" 
           class="product-card"
@@ -764,5 +780,16 @@ export default {
 .announcement-date {
   font-size: 12px;
   color: #999;
+}
+
+.no-results-message {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 16px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 </style>
