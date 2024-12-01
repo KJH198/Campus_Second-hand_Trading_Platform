@@ -306,6 +306,9 @@ export default {
     const activeReplyId = ref(null);  // 当前正在回复的评论ID
     const replyContent = ref('');     // 回复内容
 
+    // 添加二级评论数组
+    const secondLevelComments = ref([]);
+
     // 下拉菜单相关函数
     function toggleDropdown() {
       dropdownVisible.value = !dropdownVisible.value;
@@ -398,12 +401,28 @@ export default {
                 URL.createObjectURL(base64ToBlob(reply.deliver_picture)) : 
                 defaultAvatar
             }));
+
+            // 将二级评论添加到专门的数组中
+            secondLevelComments.value = [
+              ...secondLevelComments.value,
+              ...comment.reply.map(reply => ({
+                ...reply,
+                parent_comment_id: comment.goods_comment_id, // 添加父评论ID
+                parent_comment_content: comment.comment,     // 添加父评论内容
+                parent_user_name: comment.deliver_name      // 添加父评论用户名
+              }))
+            ];
           }
 
           return processedComment;
         });
 
         comments.value = processedComments;
+        
+        // 按时间排序二级评论
+        secondLevelComments.value.sort((a, b) => 
+          new Date(b.comment_time) - new Date(a.comment_time)
+        );
         
       } catch (error) {
         console.error('Error fetching comments:', error);
@@ -430,6 +449,22 @@ export default {
             ]
           }
         ];
+
+        // 设置默认二级评论数据
+        secondLevelComments.value = comments.value.reduce((acc, comment) => {
+          if (comment.reply) {
+            return [
+              ...acc,
+              ...comment.reply.map(reply => ({
+                ...reply,
+                parent_comment_id: comment.goods_comment_id,
+                parent_comment_content: comment.comment,
+                parent_user_name: comment.deliver_name
+              }))
+            ];
+          }
+          return acc;
+        }, []);
       }
     }
 
@@ -475,7 +510,7 @@ export default {
 
     function contactSeller() {
       // 实现联系卖家的逻辑
-      console.log('联系卖家');
+      console.log('���系卖家');
     }
 
     async function toggleFavorite() {
@@ -546,7 +581,7 @@ export default {
       } catch (error) {
         console.log("进入误处理分支");
         console.error('Error fetching goods detail:', error);
-        console.log("开始设置默认数据");
+        console.log("开始设置默认数");
         
         // 确保设置默认图片数组
         goodsPictures.value = [
@@ -643,17 +678,31 @@ export default {
       }
     }
 
-    // 获取评论的操作状态
+    // 修改判断函数，使用更可靠的方式来区分评论层级
+    function isSecondLevelComment(comment) {
+      // 使用多个条件来确保准确判断
+      return 'second_goods_comment_id' in comment && 'parent_comment_id' in comment;
+    }
+
+    // 修改获取评论ID的函数，添加前缀来区分不同层级
+    function getCommentId(comment) {
+      if (isSecondLevelComment(comment)) {
+        return `reply_${comment.second_goods_comment_id}`;  // 二级评论ID添加前缀
+      }
+      return `comment_${comment.goods_comment_id}`;  // 一级评论ID添加前缀
+    }
+
+    // 修改获取评论操作状态的函数
     function getCommentAction(comment) {
-      const isFirstLevel = 'goods_comment_id' in comment;
-      const commentId = isFirstLevel ? comment.goods_comment_id : comment.second_goods_comment_id;
+      const commentId = getCommentId(comment);
       return commentActions.value.get(commentId) || null;
     }
 
-    // 修改点赞函数
+    // 修改点赞函数中的ID处理
     async function handleLike(comment) {
-      const isFirstLevel = 'goods_comment_id' in comment;
-      const commentId = isFirstLevel ? comment.goods_comment_id : comment.second_goods_comment_id;
+      const commentId = getCommentId(comment);
+      const level = isSecondLevelComment(comment) ? 2 : 1;
+      const rawId = isSecondLevelComment(comment) ? comment.second_goods_comment_id : comment.goods_comment_id;
       const currentAction = commentActions.value.get(commentId);
 
       // 如果已经点赞，这次是取消点赞
@@ -667,9 +716,9 @@ export default {
             },
             body: JSON.stringify({
               like: true,
-              level: isFirstLevel ? 1 : 2,
-              id: commentId,
-              cancel: true  // 添加取消操作标记
+              level: level,
+              id: rawId,  // 使用原始ID
+              cancel: currentAction === 'like'
             })
           });
 
@@ -708,8 +757,8 @@ export default {
           },
           body: JSON.stringify({
             like: true,
-            level: isFirstLevel ? 1 : 2,
-            id: commentId,
+            level: level,
+            id: rawId,  // 使用原始ID
             cancel: false  // 添加正常操作标记
           })
         });
@@ -732,10 +781,11 @@ export default {
       }
     }
 
-    // 修改点踩函数
+    // 同样修改点踩函数
     async function handleDislike(comment) {
-      const isFirstLevel = 'goods_comment_id' in comment;
-      const commentId = isFirstLevel ? comment.goods_comment_id : comment.second_goods_comment_id;
+      const commentId = getCommentId(comment);
+      const level = isSecondLevelComment(comment) ? 2 : 1;
+      const rawId = isSecondLevelComment(comment) ? comment.second_goods_comment_id : comment.goods_comment_id;
       const currentAction = commentActions.value.get(commentId);
 
       // 如果已经点踩，这次是取消点踩
@@ -749,9 +799,9 @@ export default {
             },
             body: JSON.stringify({
               like: false,
-              level: isFirstLevel ? 1 : 2,
-              id: commentId,
-              cancel: true  // 添加取消操作标记
+              level: level,
+              id: rawId,  // 使用原始ID
+              cancel: currentAction === 'dislike'
             })
           });
 
@@ -790,8 +840,8 @@ export default {
           },
           body: JSON.stringify({
             like: false,
-            level: isFirstLevel ? 1 : 2,
-            id: commentId,
+            level: level,
+            id: rawId,  // 使用原始ID
             cancel: false  // 添加正常操作标记
           })
         });
@@ -917,6 +967,7 @@ export default {
       activeReplyId,
       replyContent,
       submitReply,
+      secondLevelComments,
     };
   }
 };
