@@ -1,17 +1,10 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
-import os
-#import backEnd.config.config as config
 
 ################################### Flask项目初始化 ###################################
 
 # 创建Flask项目app,定义前端依赖文件路径
 app = Flask(__name__,template_folder='../dist',static_folder='../dist',static_url_path='')
-#env = os.environ.get('FLASK_ENV', 'development')  # 默认为开发环境
-#if env == 'development':
-#    app.config.from_object('config.config.DevelopmentConfig')  # 使用开发环境配置
-#elif env == 'production':
-#    app.config.from_object('config.config.ProductionConfig')  # 使用生产环境配置
 # 标记使用的MySQL数据库和pymysql接口(自己改本地的数据库密码，默认所有人有一个schema名为buaa)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:kjh030607@localhost/buaa'
 # 关闭对模型修改的跟踪，以提高性能

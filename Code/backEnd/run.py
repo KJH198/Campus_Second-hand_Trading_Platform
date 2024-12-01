@@ -1,10 +1,8 @@
-import os
-
 import backEnd.DB_Initiator as DB_Initiator
 from backEnd.DB_Initiator import app
 import backEnd.DB_Tools as dbTools
 from backEnd.DB_Tools import getUserPicture
-from flask import request,render_template,jsonify, send_file, send_from_directory
+from flask import request,render_template,jsonify, send_file
 
 
 @app.route('/', methods=['GET','POST'])
@@ -38,6 +36,7 @@ def home():
     data = request.get_json()
     if type == 'user_picture':
         picture_url = getUserPicture(data.get("user_id"))      #本地图像路径
+        print(picture_url)
         type = get_type(picture_url)
         return send_file(picture_url, type)
     elif type == 'search':
