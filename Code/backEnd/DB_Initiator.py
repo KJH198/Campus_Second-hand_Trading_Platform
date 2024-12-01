@@ -1,14 +1,22 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
+import os
+#import backEnd.config.config as config
 
 ################################### Flask项目初始化 ###################################
 
 # 创建Flask项目app,定义前端依赖文件路径
 app = Flask(__name__,template_folder='../dist',static_folder='../dist',static_url_path='')
+#env = os.environ.get('FLASK_ENV', 'development')  # 默认为开发环境
+#if env == 'development':
+#    app.config.from_object('config.config.DevelopmentConfig')  # 使用开发环境配置
+#elif env == 'production':
+#    app.config.from_object('config.config.ProductionConfig')  # 使用生产环境配置
 # 标记使用的MySQL数据库和pymysql接口(自己改本地的数据库密码，默认所有人有一个schema名为buaa)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:BUAA2024Python@localhost/buaa'
 # 关闭对模型修改的跟踪，以提高性能
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['DEBUG'] = True
 
 # 初始化SQLAlchemy实例
 db = SQLAlchemy(app)
@@ -21,7 +29,7 @@ class User(db.Model):
     phone_number = db.Column(db.String(80), nullable=False, unique=True)
     user_name = db.Column(db.String(80), nullable=False)
     password = db.Column(db.String(120), nullable=False)
-    picture_url = db.Column(db.String(80), nullable=True)  # 可空
+    picture_url = db.Column(db.String(200), nullable=True)  # 可空
     other_information = db.Column(db.Text, nullable=True)  # 可空
 
 # 管理员表
@@ -137,7 +145,7 @@ class Announcement(db.Model):
     content = db.Column(db.Text, nullable = False)
     
 class Picture(db.Model):
-    picture_url = db.Column(db.String(80), primary_key=True)
+    picture_url = db.Column(db.String(200), primary_key=True)
     goods_id = db.Column(db.Integer, db.ForeignKey('goods.goods_id'))
     
 ##################################### 调用接口 ########################################
