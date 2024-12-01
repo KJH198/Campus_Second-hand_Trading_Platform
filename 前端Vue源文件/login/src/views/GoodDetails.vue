@@ -158,7 +158,7 @@
                   @click="handleDislike(comment)"
                 >
                   <i class="fas fa-thumbs-down thumb-icon"></i>
-                  <span class="count">{{ comment.unhelpfule }}</span>
+                  <span class="count">{{ comment.unhelpful }}</span>
                 </button>
                 <button class="reply-btn" @click="handleReply(comment)">
                   {{ activeReplyId === comment.goods_comment_id ? '取消回复' : '回复' }}
@@ -217,7 +217,7 @@
                     @click="handleDislike(reply)"
                   >
                     <i class="fas fa-thumbs-down thumb-icon"></i>
-                    <span class="count">{{ reply.unhelpfule }}</span>
+                    <span class="count">{{ reply.unhelpful }}</span>
                   </button>
                 </div>
               </div>
@@ -414,7 +414,7 @@ export default {
             goods_comment_id: 1,
             comment_time: "2024-03-20 10:00",
             helpful: 12,
-            unhelpfule: 3,
+            unhelpful: 3,
             deliver_name: "测试用户1",
             deliver_picture: defaultAvatar,
             reply: [
@@ -423,7 +423,7 @@ export default {
                 second_goods_comment_id: 1,
                 comment_time: "2024-03-20 10:30",
                 helpful: 5,
-                unhelpfule: 1,
+                unhelpful: 1,
                 deliver_name: "测试用户2",
                 deliver_picture: defaultAvatar
               }
@@ -465,7 +465,7 @@ export default {
           await fetchComments(); // 重新获取评论列表
           newComment.value = ''; // 清空入框
         } else {
-          ElMessage.error('评论发表失败请重试');
+          ElMessage.error('���论发表失败重试');
         }
       } catch (error) {
         console.error('Error submitting comment:', error);
@@ -687,6 +687,7 @@ export default {
         }
 
         const data = await response.json();
+        console.log(data.success);
         if (data.success) {
           comment.helpful += 1;
           // 记录用户的点赞操作
@@ -739,7 +740,7 @@ export default {
 
         const data = await response.json();
         if (data.success) {
-          comment.unhelpfule += 1;
+          comment.unhelpful += 1;
           // 记录用户的点踩操作
           commentActions.value.set(commentId, 'dislike');
           ElMessage.success('点踩成功');

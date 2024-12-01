@@ -283,7 +283,8 @@ export default {
           current_user_id: user_id.value,   // 添加当前登录者的ID
           picture: product.picture,         // 商品图片
           name: product.goods_name,         // 商品名称
-          price: product.goods_price        // 商品价格
+          price: product.goods_price,       // 商品价格
+          userAvatar: userAvatar.value      // 添加用户头像
         }
       }).then(() => {
         console.log('跳转成功');
