@@ -383,33 +383,36 @@ export default {
         
         const data = await response.json();
         
-        // 处理评论数据中的头像
+        // 处理评论数据中的头像，同时添加 level 字段
         const processedComments = data.map(comment => {
-          // 处理一级评论头像
+          // 处理一级评论头像并添加 level
           const processedComment = {
             ...comment,
+            level: 1,  // 添加一级评论标识
             deliver_picture: comment.deliver_picture ? 
               URL.createObjectURL(base64ToBlob(comment.deliver_picture)) : 
               defaultAvatar
           };
 
-          // 处理二级评论头像
+          // 处理二级评论头像并添加 level
           if (comment.reply && Array.isArray(comment.reply)) {
             processedComment.reply = comment.reply.map(reply => ({
               ...reply,
+              level: 2,  // 添加二级评论标识
               deliver_picture: reply.deliver_picture ? 
                 URL.createObjectURL(base64ToBlob(reply.deliver_picture)) : 
                 defaultAvatar
             }));
 
-            // 将二级评论添加到专门的数组中
+            // 更新二级评论数组时也带上 level
             secondLevelComments.value = [
               ...secondLevelComments.value,
               ...comment.reply.map(reply => ({
                 ...reply,
-                parent_comment_id: comment.goods_comment_id, // 添加父评论ID
-                parent_comment_content: comment.comment,     // 添加父评论内容
-                parent_user_name: comment.deliver_name      // 添加父评论用户名
+                level: 2,  // 添加二级评论标识
+                parent_comment_id: comment.goods_comment_id,
+                parent_comment_content: comment.comment,
+                parent_user_name: comment.deliver_name
               }))
             ];
           }
@@ -426,7 +429,7 @@ export default {
         
       } catch (error) {
         console.error('Error fetching comments:', error);
-        // 设置默认评论数据用于测试
+        // 设置默认评论数据时也添加 level
         comments.value = [
           {
             comment: "这是一条测试评论",
@@ -436,6 +439,7 @@ export default {
             unhelpful: 3,
             deliver_name: "测试用户1",
             deliver_picture: defaultAvatar,
+            level: 1,  // 添加一级评论标识
             reply: [
               {
                 comment: "这是一条回复",
@@ -444,27 +448,12 @@ export default {
                 helpful: 5,
                 unhelpful: 1,
                 deliver_name: "测试用户2",
-                deliver_picture: defaultAvatar
+                deliver_picture: defaultAvatar,
+                level: 2  // 添加二级评论标识
               }
             ]
           }
         ];
-
-        // 设置默认二级评论数据
-        secondLevelComments.value = comments.value.reduce((acc, comment) => {
-          if (comment.reply) {
-            return [
-              ...acc,
-              ...comment.reply.map(reply => ({
-                ...reply,
-                parent_comment_id: comment.goods_comment_id,
-                parent_comment_content: comment.comment,
-                parent_user_name: comment.deliver_name
-              }))
-            ];
-          }
-          return acc;
-        }, []);
       }
     }
 
@@ -510,7 +499,7 @@ export default {
 
     function contactSeller() {
       // 实现联系卖家的逻辑
-      console.log('���系卖家');
+      console.log('系卖家');
     }
 
     async function toggleFavorite() {
@@ -680,16 +669,14 @@ export default {
 
     // 修改判断函数，使用更可靠的方式来区分评论层级
     function isSecondLevelComment(comment) {
-      // 使用多个条件来确保准确判断
-      return 'second_goods_comment_id' in comment && 'parent_comment_id' in comment;
+      return comment.level === 2;  // 直接使用 level 字段判断
     }
 
-    // 修改获取评论ID的函数，添加前缀来区分不同层级
+    // 修改获取评论ID的函数
     function getCommentId(comment) {
-      if (isSecondLevelComment(comment)) {
-        return `reply_${comment.second_goods_comment_id}`;  // 二级评论ID添加前缀
-      }
-      return `comment_${comment.goods_comment_id}`;  // 一级评论ID添加前缀
+      return comment.level === 2 ? 
+        `reply_${comment.second_goods_comment_id}` : 
+        `comment_${comment.goods_comment_id}`;
     }
 
     // 修改获取评论操作状态的函数
