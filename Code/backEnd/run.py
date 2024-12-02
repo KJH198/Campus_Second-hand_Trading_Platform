@@ -82,6 +82,18 @@ def user_profile():
     else:
         return jsonify({"error":"Unexpected error in /user_profile"})
     
+@app.route('/goods_picture_upload', methods=['POST'])
+def goods_picture_upload():
+    #TODO: 上传图片
+    print("ok")
+    return jsonify({"success":True})
+
+def allowed_file(filename):
+    # 检查文件扩展名是否允许
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 def get_type(filename):
     # 根据文件扩展名返回对应的 MIME 类型
     if filename.lower().endswith(('.png')):

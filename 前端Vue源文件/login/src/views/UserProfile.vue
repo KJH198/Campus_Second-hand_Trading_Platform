@@ -28,6 +28,8 @@
           </div>
         </div>
       </header>
+
+    
   
       <!-- 主要内容区域 -->
       <main class="main-content">
@@ -96,6 +98,27 @@
           </div>
         </div>
       </main>
+
+        <!-- 收藏商品展示区域 -->
+    <div class="favorites-section">
+      <h2 class="section-title">我的收藏</h2>
+      <div class="favorites-grid">
+        <div 
+          v-for="favorite in favorites" 
+          :key="favorite.goods_id" 
+          class="favorite-card"
+          @click="goToGoodsDetails(favorite)"
+        >
+          <div class="favorite-image">
+            <img :src="favorite.picture" :alt="favorite.goods_name" />
+          </div>
+          <div class="favorite-info">
+            <h3 class="favorite-name">{{ favorite.goods_name }}</h3>
+            <p class="favorite-price">¥{{ favorite.goods_price }}</p>
+            </div>
+          </div>
+        </div>
+      </div>    
   
       <!-- 系统公告弹窗 -->
       <el-dialog
@@ -178,6 +201,8 @@
       const route = useRoute();
       const router = useRouter();
       const userFormRef = ref(null);
+      const favorites = ref([]);
+
   
       // 用户信息相关
       const userAvatar = ref(defaultAvatar);
@@ -220,7 +245,7 @@
       // 商品列表相关
       const myGoods = ref([]);
       const currentPage = ref(1);
-      const pageSize = 8;
+      const pageSize = 3;
   
       // 其他状态
       const dropdownVisible = ref(false);
@@ -329,6 +354,7 @@
         }
       }
   
+      // 跳转至自己创建的商品详情
       function goToDetails(good) {
         router.push({
           name: 'GoodDetails',
@@ -341,6 +367,16 @@
           }
         });
       }
+
+      // 跳转至收藏商品详情
+      function goToGoodsDetails(favorite) {
+        router.push({
+        name: 'GoodsDetails',
+        params: { 
+          productId: favorite.goods_id
+        }
+      });
+    }
   
       function getStatusText(status) {
         const statusMap = {
@@ -418,6 +454,34 @@
           ElMessage.error('获取商品列表失败');
         }
       }
+
+      // 获取收藏商品 TODO：后端
+    async function fetchFavorites() {
+      try {
+        const response = await fetch("/user_favorites", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            user_id: route.query.user_id
+          })
+        });
+
+        if (!response.ok) throw new Error('获取收藏失败');
+
+        const data = await response.json();
+        if (data.success) {
+          favorites.value = data.favorites.map(favorite => ({
+            ...favorite,
+            picture: favorite.picture ? URL.createObjectURL(base64ToBlob(favorite.picture)) : defaultAvatar
+          }));
+        }
+      } catch (error) {
+          console.error('Error fetching favorites:', error);
+          ElMessage.error('获取收藏失败');
+        }
+      }
   
       function base64ToBlob(base64) {
         const byteCharacters = atob(base64);
@@ -432,6 +496,7 @@
       onMounted(() => {
         fetchUserInfo();
         fetchUserGoods();
+        fetchFavorites();
       });
   
       return {
@@ -458,7 +523,9 @@
         triggerAvatarUpload,
         avatarInput,
         editFormRef,
-        editRules
+        editRules,
+        favorites,
+        goToGoodsDetails
       };
     }
   };
@@ -686,4 +753,63 @@
     gap: 10px;
     margin-top: 20px;
   }
+
+  .favorites-section {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+}
+
+.favorites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.favorite-card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s;
+  cursor: pointer;
+}
+
+.favorite-card:hover {
+  transform: translateY(-5px);
+}
+
+.favorite-image {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+}
+
+.favorite-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.favorite-info {
+  padding: 15px;
+}
+
+.favorite-name {
+  margin: 0;
+  font-size: 14px;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.favorite-price {
+  margin: 10px 0;
+  color: #ff5000;
+  font-size: 16px;
+  font-weight: bold;
+}
   </style>

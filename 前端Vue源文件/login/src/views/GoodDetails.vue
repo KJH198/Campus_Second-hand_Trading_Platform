@@ -396,6 +396,8 @@ export default {
     const comments = ref([]);
     const commentActions = ref(new Map()); // 用于存储用户对每条评论的操作状态
 
+    const uploadUrl = '/goods_picture_upload';
+
     // 添加回复相关的响应式变量
     const activeReplyId = ref(null);  // 当前正在回复的评论ID
     const replyContent = ref('');     // 回复内容
@@ -1183,7 +1185,8 @@ export default {
       beforeUpload,
       submitEdit,
       handleCloseEdit,
-      initEditForm
+      initEditForm,
+      uploadUrl
     };
   }
 };
