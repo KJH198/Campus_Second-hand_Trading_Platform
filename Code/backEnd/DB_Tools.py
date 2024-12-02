@@ -1,8 +1,10 @@
-import random
 from backEnd.DB_Initiator import db,User,Manager,Log,Address,Goods,Order,Message,OrderComment,SecondaryOrderComment,GoodsConsultation,GoodsConsultationReply,Collection,Accusation,Announcement,Picture
 from datetime import datetime
 import base64
+import random
 
+# 自己修改为本地存储图片文件夹的绝对路径 + \\
+picturePath = 'C:\\Users\\kjh15\\Desktop\\Project\\Campus_Second-hand_Trading_Platform\\Code\\picture\\'
 urlCnt = 0
 
 # 添加管理员
@@ -46,11 +48,12 @@ def reDefineUser(info): # user_id, user_name, password, picture, pictureName, ot
 # 生成图片URL
 def urlGenerator(binaryPicture,pictureName):
     global urlCnt
-    file_path = 'picture/' + str(urlCnt) + get_type(pictureName)
-    with open(file_path, 'wb') as file:     # 二进制写入
+    global picturePath
+    local_picture_name = str(urlCnt) + get_type(pictureName)
+    with open(picturePath+local_picture_name, 'wb') as file:     # 二进制写入
         file.write(binaryPicture)
     urlCnt += 1
-    return file_path
+    return local_picture_name
 
 def get_type(pictureName):
     # 根据文件扩展名返回对应的 MIME 类型
@@ -85,7 +88,7 @@ def addLog(user,log_state):
 def getUserPicture(user_id):
     print(user_id)
     user = User.query.filter_by(user_id = user_id).first()
-    return user.picture_url
+    return picturePath + user.picture_url
 
 def getUserInfo(user_id):
     user = User.query.filter_by(user_id = user_id).first()
@@ -152,18 +155,15 @@ def getUnselledGoods(num):
         goods_name = randGoods.goods_name
         goods_price = randGoods.goods_price
         first_picture = Picture.query.filter_by(goods_id = goods_id).first() # 只获取第一个图片
-        pictures_list = [first_picture.picture_url]
+        pictures_list = [picturePath + first_picture.picture_url]
         pictures_byte_stream_list = []
         for picture_url in pictures_list:
             with open(picture_url,'rb') as file:
                 picture_byte_stream = file.read()
             base64_str = base64.b64encode(picture_byte_stream).decode("ascii")
             pictures_byte_stream_list.append(base64_str)
-        #data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_list})
-        print(pictures_byte_stream_list)
         if (len(pictures_byte_stream_list) != 0):
             data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_byte_stream_list[0]})
-        #data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_byte_stream_list[0]})
         num -= 1
     return data
     
