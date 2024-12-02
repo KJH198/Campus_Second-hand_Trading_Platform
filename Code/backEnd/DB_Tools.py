@@ -4,7 +4,7 @@ import base64
 import random
 
 # 自己修改为本地存储图片文件夹的绝对路径 + \\
-picturePath = 'C:\\Users\\kjh15\\Desktop\\Project\\Campus_Second-hand_Trading_Platform\\Code\\picture\\'
+picturePath = 'E:\\Junior_Autumn\\Database\\Final_Project\\Campus_Second-hand_Trading_Platform\\Code\\backEnd\\uploads\\'
 urlCnt = 0
 
 # 添加管理员
@@ -90,14 +90,52 @@ def getUserPicture(user_id):
     user = User.query.filter_by(user_id = user_id).first()
     return picturePath + user.picture_url
 
+#获得用户信息
 def getUserInfo(user_id):
     user = User.query.filter_by(user_id = user_id).first()
     phone_number = user.phone_number
     user_name = user.user_name
     password = user.password
     picture_url = user.picture_url
+    with open(picturePath + picture_url,'rb') as file:
+        picture_byte_stream = file.read()
+    base64_str = base64.b64encode(picture_byte_stream).decode("ascii")
     other_information = user.other_information
-    return {"phone_number":phone_number,"user_name":user_name,"password":password,"picture_url":picture_url,"other_information":other_information}
+    return {"success":True, "phone_number":phone_number,"user_name":user_name,"password":password,"picture_url":base64_str,"other_information":other_information}
+
+#在profile页面中修改用户信息（用户名，手机号，简介）
+def updateProfile(info):
+    print(info)
+    if (info.get("user_id")): user = User.query.filter_by(user_id = info.get("user_id")).first()
+    else: return False
+    if (info.get("user_name")): user.user_name = info.get("user_name")
+    if (info.get("phone_number")): user.phone_number = info.get("phone_number")
+    if (info.get("other_information")): user.other_information = info.get("other_information")
+    if (info.get("password")): user.password = info.get("password")
+    db.session.commit()
+    return True
+
+#获取用户发布的商品
+def getUserGoods(user_id):
+    goods = Goods.query.filter_by(seller_id = user_id).all()
+    size = len(goods)
+    data = []
+    for i in range(0,size):
+        userGoods = goods[i]
+        goods_id = userGoods.goods_id
+        goods_name = userGoods.goods_name
+        goods_price = userGoods.goods_price
+        first_picture = Picture.query.filter_by(goods_id = goods_id).first() # 只获取第一个图片
+        pictures_list = [picturePath + first_picture.picture_url]
+        pictures_byte_stream_list = []
+        for picture_url in pictures_list:
+            with open(picture_url,'rb') as file:
+                picture_byte_stream = file.read()
+            base64_str = base64.b64encode(picture_byte_stream).decode("ascii")
+            pictures_byte_stream_list.append(base64_str)
+        if (len(pictures_byte_stream_list) != 0):
+            data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_byte_stream_list[0]})
+    return data
 
 ################################################################################################################
 # 添加商品

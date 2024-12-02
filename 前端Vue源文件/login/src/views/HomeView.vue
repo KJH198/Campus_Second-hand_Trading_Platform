@@ -200,8 +200,40 @@ export default {
       }
     }
 
-    function viewProfile() {
-      console.log("查看个人信息");
+    async function viewProfile() {
+      try {
+        // 获取用户信息
+        const response = await fetch("/home", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': "user_info"
+          },
+          body: JSON.stringify({
+            phone_number: phone_number.value,
+            user_id: user_id.value
+          })
+        });
+
+        if (!response.ok) throw new Error('获取用户信息失败');
+        
+        const userData = await response.json();
+        
+        // 通过路由导航时传递用户信息
+        router.push({
+          path: '/profile',
+          query: {
+            user_id: user_id.value,
+            phone_number: phone_number.value
+          },
+          state: {
+            userInfo: userData // 包含用户的详细信息
+          }
+        });
+      } catch (error) {
+        console.error("获取用户信息失败:", error);
+        ElMessage.error('获取用户信息失败');
+      }
     }
 
     function viewNotifications() {

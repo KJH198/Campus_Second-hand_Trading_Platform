@@ -75,7 +75,18 @@
           </div>
         </div>
         <div class="product-info">
-          <h1 class="product-name">{{ goodsName }}</h1>
+          <div class="product-header">
+            <h1 class="product-name">{{ goodsName }}</h1>
+            <el-button 
+              v-if="isOwner" 
+              type="primary" 
+              @click="showEditDialog = true"
+              class="edit-button"
+            >
+              <el-icon><Edit /></el-icon>
+              编辑商品
+            </el-button>
+          </div>
           <div class="product-price">¥{{ goodsPrice }}</div>
           <div class="product-meta">
             <div class="meta-item heat">
@@ -244,6 +255,85 @@
         </div>
       </div>
     </el-dialog>
+
+    <!-- 添加编辑商品的对话框 -->
+    <el-dialog
+      v-model="showEditDialog"
+      title="编辑商品信息"
+      width="60%"
+      :before-close="handleCloseEdit"
+    >
+      <el-form 
+        :model="editForm" 
+        :rules="editRules"
+        ref="editFormRef"
+        label-width="100px"
+      >
+        <el-form-item label="商品名称" prop="goods_name">
+          <el-input v-model="editForm.goods_name" />
+        </el-form-item>
+
+        <el-form-item label="商品类别" prop="category">
+          <el-select v-model="editForm.category" placeholder="请选择商品类别">
+            <el-option label="体育运动" value="sport" />
+            <el-option label="学习用品" value="study" />
+            <el-option label="电子数码" value="digital" />
+            <el-option label="衣物饰品" value="cloth" />
+            <el-option label="其他类别" value="else" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="商品价格" prop="goods_price">
+          <el-input-number 
+            v-model="editForm.goods_price" 
+            :precision="2" 
+            :step="0.1" 
+            :min="0"
+          />
+        </el-form-item>
+
+        <el-form-item label="商品描述" prop="description">
+          <el-input 
+            type="textarea" 
+            v-model="editForm.description" 
+            rows="4"
+          />
+        </el-form-item>
+
+        <el-form-item label="商品状态" prop="status">
+          <el-select v-model="editForm.status" placeholder="请选择商品状态">
+            <el-option label="在售" value="on_sale" />
+            <el-option label="已售出" value="sold" />
+            <el-option label="下架" value="removed" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="商品图片">
+          <el-upload
+            class="goods-uploader"
+            :action="uploadUrl"
+            :show-file-list="true"
+            :on-success="handleUploadSuccess"
+            :on-error="handleUploadError"
+            :before-upload="beforeUpload"
+            :file-list="fileList"
+            multiple
+            list-type="picture-card"
+          >
+            <el-icon><Plus /></el-icon>
+          </el-upload>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="handleCloseEdit">取消</el-button>
+          <el-button type="primary" @click="submitEdit">
+            确认修改
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -263,7 +353,9 @@ import {
   Star, 
   Calendar, 
   Phone, 
-  Position     // 使用 Position 图标来模拟拇指
+  Position,     // 使用 Position 图标来模拟拇指
+  Edit, 
+  Plus
 } from '@element-plus/icons-vue';
 import { ElIcon } from 'element-plus';
 import { ElDialog } from 'element-plus';
@@ -280,7 +372,9 @@ export default {
     Calendar,
     Phone,
     ElDialog,
-    Position    // 注册 Position 组件
+    Position,    // 注册 Position 组件
+    Edit, 
+    Plus
   },
   setup() {
     const route = useRoute();
@@ -906,12 +1000,135 @@ export default {
       }
     }
 
+    // 添加新的响应式变量
+    const showEditDialog = ref(false);
+    const editFormRef = ref(null);
+    const isOwner = ref(route.query.isOwner === 'true');
+    const fileList = ref([]);
+    
+    const editForm = ref({
+      goods_name: '',
+      category: '',
+      goods_price: 0,
+      description: '',
+      status: '',
+      pictures: []
+    });
+
+    const editRules = {
+      goods_name: [
+        { required: true, message: '请输入商品名称', trigger: 'blur' },
+        { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
+      ],
+      category: [
+        { required: true, message: '请选择商品类别', trigger: 'change' }
+      ],
+      goods_price: [
+        { required: true, message: '请输入商品价格', trigger: 'blur' }
+      ],
+      description: [
+        { required: true, message: '请输入商品描述', trigger: 'blur' }
+      ],
+      status: [
+        { required: true, message: '请选择商品状态', trigger: 'change' }
+      ]
+    };
+
+    // 初始化编辑表单
+    function initEditForm() {
+      editForm.value = {
+        goods_name: goodsName.value,
+        category: '', // 需要从后端获取
+        goods_price: parseFloat(goodsPrice.value),
+        description: goodsDescription.value,
+        status: '', // 需要从后端获取
+        pictures: goodsPictures.value.map(url => ({ url }))
+      };
+      fileList.value = editForm.value.pictures.map((pic, index) => ({
+        name: `商品图片${index + 1}`,
+        url: pic.url
+      }));
+    }
+
+    // 处理图片上传
+    function handleUploadSuccess(response, file) {
+      if (response.success) {
+        editForm.value.pictures.push(response.url);
+        ElMessage.success('图片上传成功');
+      } else {
+        ElMessage.error(response.message || '上传失败');
+      }
+    }
+
+    function handleUploadError() {
+      ElMessage.error('图片上传失败');
+    }
+
+    function beforeUpload(file) {
+      const isImage = file.type.startsWith('image/');
+      const isLt5M = file.size / 1024 / 1024 < 5;
+
+      if (!isImage) {
+        ElMessage.error('只能上传图片文件!');
+        return false;
+      }
+      if (!isLt5M) {
+        ElMessage.error('图片大小不能超过 5MB!');
+        return false;
+      }
+      return true;
+    }
+
+    // 提交编辑
+    async function submitEdit() {
+      if (!editFormRef.value) return;
+      
+      try {
+        await editFormRef.value.validate();
+        
+        const response = await fetch("/goods_detail", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'update_goods'
+          },
+          body: JSON.stringify({
+            goods_id: route.params.productId,
+            ...editForm.value
+          })
+        });
+
+        if (!response.ok) throw new Error('更新失败');
+
+        const data = await response.json();
+        if (data.success) {
+          ElMessage.success('商品信息更新成功');
+          showEditDialog.value = false;
+          // 刷新商品信息
+          fetchProductDetails();
+        } else {
+          ElMessage.error(data.message || '更新失败');
+        }
+      } catch (error) {
+        console.error('Error updating product:', error);
+        ElMessage.error('保存失败，请重试');
+      }
+    }
+
+    function handleCloseEdit() {
+      editFormRef.value?.resetFields();
+      showEditDialog.value = false;
+    }
+
     onMounted(() => {
       // console.log("组件已挂载");
       document.addEventListener('click', closeDropdown);
       console.log("开始调用 fetchGoodsDetail");
       fetchGoodsDetail();
       fetchComments();
+      if (isOwner.value) {
+        initEditForm();
+      }
     });
 
     onUnmounted(() => {
@@ -955,6 +1172,18 @@ export default {
       replyContent,
       submitReply,
       secondLevelComments,
+      showEditDialog,
+      editFormRef,
+      editForm,
+      editRules,
+      isOwner,
+      fileList,
+      handleUploadSuccess,
+      handleUploadError,
+      beforeUpload,
+      submitEdit,
+      handleCloseEdit,
+      initEditForm
     };
   }
 };
@@ -1633,5 +1862,38 @@ export default {
 
 .cancel-btn:hover {
   color: #666;
+}
+
+.product-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.edit-button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.goods-uploader {
+  :deep(.el-upload--picture-card) {
+    width: 100px;
+    height: 100px;
+    line-height: 100px;
+  }
+
+  :deep(.el-upload-list--picture-card .el-upload-list__item) {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
 }
 </style> 

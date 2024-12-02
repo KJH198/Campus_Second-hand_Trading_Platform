@@ -3,6 +3,7 @@ from backEnd.DB_Initiator import app
 import backEnd.DB_Tools as dbTools
 from backEnd.DB_Tools import getUserPicture
 from flask import request,render_template,jsonify, send_file
+import json
 
 
 @app.route('/', methods=['GET','POST'])
@@ -36,10 +37,6 @@ def home():
     
     type = request.headers.get('type')
     data = request.get_json()
-    picture_url = getUserPicture(data.get("user_id"))      #本地图像路径
-    type = get_type(picture_url)
-    return send_file(picture_url, type)
-    
     if type == 'user_picture':
         picture_url = getUserPicture(data.get("user_id"))      #本地图像路径
         print(picture_url)
@@ -51,8 +48,27 @@ def home():
         return jsonify({"goods":dbTools.searchGoodsCategory(data.get("category_name"))})
     elif type == 'announcement':
         return jsonify({"announcements":dbTools.getAnnouncement()})
+    elif type == 'user_info':
+        return jsonify({"user_info":dbTools.getUserInfo(data.get("user_id"))})
     else:
         return jsonify({"error":"Unexpected error in /home"})
+    
+@app.route('/user_profile', methods=['POST'])
+def user_profile():
+    type = request.headers.get('type')
+    data = request.get_json()
+    if type == 'get_profile':
+        return jsonify(dbTools.getUserInfo(data.get('user_id')))
+    elif type == 'get_user_goods':
+        return jsonify({"success":True, "goods":dbTools.getUserGoods(data.get('user_id'))})
+    elif type == 'update_profile':
+        info = {'user_id':data['user_id'], 'user_name':data['user_name'], 'phone_number':data['phone_number'], 'other_information':data['other_information']}
+        print(info)
+        return jsonify({"success":dbTools.updateProfile(info)})
+    elif type == 'update_avatar':
+        pass
+    else:
+        return jsonify({"error":"Unexpected error in /user_profile"})
     
 def get_type(filename):
     # 根据文件扩展名返回对应的 MIME 类型
