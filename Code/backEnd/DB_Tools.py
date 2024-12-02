@@ -83,6 +83,7 @@ def addLog(user,log_state):
 
 # 获得用户头像
 def getUserPicture(user_id):
+    print(user_id)
     user = User.query.filter_by(user_id = user_id).first()
     return user.picture_url
 

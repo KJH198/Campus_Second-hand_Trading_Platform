@@ -17,7 +17,9 @@ def login():
     type = request.headers.get('type')
     data = request.get_json()
     if type == 'login':
+        print('login')
         if (data.get("isManager")) :
+            print("manager")
             return jsonify({"success":dbTools.mangerLoginJudge(data.get('manager_name'),data.get('password'))})    
         else:
             # with open('backEnd\\uploads\\1.jpg','rb') as file:  # 在第一次登录后再注释掉
@@ -26,7 +28,10 @@ def login():
             # with open('Code\\backEnd\\uploads\\0.jpg','rb') as file:
             #     b = file.read()
             # dbTools.addGoods(1,[b],"goods_name","category_name","goods_price","goods_description")
-            return jsonify({"success":dbTools.loginJudge(data.get('phone_number'),data.get('password'))})    
+            print("user")
+            print(dbTools.loginJudge(data.get('phone_number'),data.get('password')))
+            print(jsonify(dbTools.loginJudge(data.get('phone_number'),data.get('password'))))
+            return jsonify(dbTools.loginJudge(data.get('phone_number'),data.get('password')))    
     elif type == 'register':
         print(data)
         return jsonify({"success":dbTools.register(data.get('user_name'),data.get('phone_number'),data.get('password'))})    
@@ -40,8 +45,12 @@ def home():
     
     type = request.headers.get('type')
     data = request.get_json()
+    picture_url = getUserPicture(data.get("user_id"))      #本地图像路径
+    type = get_type(picture_url)
+    return send_file(picture_url, type)
+    
     if type == 'user_picture':
-        picture_url = getUserPicture(data.get("phone_number"))      #本地图像路径
+        picture_url = getUserPicture(data.get("user_id"))      #本地图像路径
         type = get_type(picture_url)
         return send_file(picture_url, type)
     elif type == 'search':
