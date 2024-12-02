@@ -154,15 +154,12 @@ def getUnselledGoods(num):
         goods_name = randGoods.goods_name
         goods_price = randGoods.goods_price
         first_picture = Picture.query.filter_by(goods_id = goods_id).first() # 只获取第一个图片
-        pictures_list = [picturePath + first_picture.picture_url]
-        pictures_byte_stream_list = []
-        for picture_url in pictures_list:
-            with open(picture_url,'rb') as file:
-                picture_byte_stream = file.read()
-            base64_str = base64.b64encode(picture_byte_stream).decode("ascii")
-            pictures_byte_stream_list.append(base64_str)
-        if (len(pictures_byte_stream_list) != 0):
-            data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_byte_stream_list[0]})
+        
+        picture_local_url = picturePath + first_picture.picture_url
+        with open(picture_local_url,'rb') as file:
+            picture_byte_stream = file.read()
+        picture = base64.b64encode(picture_byte_stream).decode("ascii")
+        data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":picture})
         num -= 1
     return data
     
@@ -172,16 +169,31 @@ def getGoodsInfo(goods_id):
     goods_name = goods.goods_name
     goods_price = goods.goods_price
     goods_pictures_url = Picture.query.filter_by(goods_id = goods_id).all()
-    pictures_list = [goods_picture_url.picture_url for goods_picture_url in goods_pictures_url]
+    pictures_list = [picturePath + goods_picture_url.picture_url for goods_picture_url in goods_pictures_url]
+    pictures_byte_stream_list = []
+    for picture_url in pictures_list:
+        with open(picture_url,'rb') as file:
+            picture_byte_stream = file.read()
+        base64_str = base64.b64encode(picture_byte_stream).decode("ascii")
+        pictures_byte_stream_list.append(base64_str)
+        
     seller_id = goods.seller_id
+    seller = User.query.filter_by(user_id = seller_id).first()
+    seller_name = seller.user_name
+    
+    picture_local_url = picturePath + seller.picture_url
+    with open(picture_local_url,'rb') as file:
+        picture_byte_stream = file.read()
+    seller_picture = base64.b64encode(picture_byte_stream).decode("ascii")
+    
     begin_time = goods.begin_time
     category_name = goods.category_name 
     goods_description = goods.goods_description
     goods_state = goods.goods_state
     heat = goods.heat
-    return {"goods_name":goods_name,"goods_price":goods_price,"pictures_url":pictures_list,"seller_id":seller_id,
-            "begin_time":begin_time, "category_name":category_name,"goods_description":goods_description,
-            "goods_state":goods_state,"heat":heat}
+    return {"goods_name":goods_name,"goods_price":goods_price,"goods_pictures":pictures_byte_stream_list,"seller_name":seller_name,
+            "seller_picture":seller_picture,"begin_time":begin_time, "category_name":category_name,
+            "goods_description":goods_description,"goods_state":goods_state,"heat":heat}
     
 # 按关键字搜索商品
 def searchGoods(info):
@@ -192,7 +204,7 @@ def searchGoods(info):
     size = len(goods)
     data = []
     for i in range(0,size):
-        searchedGoods = s[i]
+        searchedGoods = goods[i]
         goods_id = searchedGoods.goods_id
         goods_name = searchedGoods.goods_name
         goods_price = searchedGoods.goods_price
@@ -207,7 +219,7 @@ def searchGoodsCategory(category):
     size = len(goods)
     data = []
     for i in range(0,size):
-        searchedGoods = s[i]
+        searchedGoods = goods[i]
         goods_id = searchedGoods.goods_id
         goods_name = searchedGoods.goods_name
         goods_price = searchedGoods.goods_price
@@ -228,4 +240,91 @@ def getAnnouncement():
         title = announcement.title
         content = announcement.content
         data.append({"manger_name":manger_name,"deliver_time":deliver_time,"title":title,"content":content})
+    return data
+
+##########################################################################################################################
+def addConsultation(goods_id,deliver_id,comment):
+    newConsultation = GoodsConsultation(
+            goods_id = goods_id,
+            deliver_id = deliver_id,
+            comment = comment,
+            comment_time = datetime.now(), 
+            helpful = 0,
+            unhelpful = 0)
+    db.session.add(newConsultation)
+    db.session.commit()
+    return True
+
+def addConsultationReply(goods_consultation_id,deliver_id,comment):
+    newConsultationReply = GoodsConsultationReply(
+            goods_consultation_id = goods_consultation_id,
+            deliver_id = deliver_id,
+            comment = comment,
+            comment_time = datetime.now(), 
+            helpful = 0,
+            unhelpful = 0)
+    db.session.add(newConsultationReply)
+    db.session.commit()
+    return True
+
+def like(like,level,cancel,id):
+    if level == 1:
+        goodsConsultation = GoodsConsultation.query.filter_by(goods_consultation_id = id).first()
+        if like: 
+            if cancel: goodsConsultation.helpful = goodsConsultation.helpful - 1
+            else: goodsConsultation.helpful = goodsConsultation.helpful + 1
+        else: 
+            if cancel: goodsConsultation.unhelpful = goodsConsultation.unhelpful - 1
+            else: goodsConsultation.unhelpful = goodsConsultation.unhelpful + 1   
+    else:
+        goodsConsultationReply = GoodsConsultationReply.query.filter_by(goods_consultation_reply_id = id).first()
+        if like: 
+            if cancel: goodsConsultationReply.helpful = goodsConsultationReply.helpful - 1
+            else: goodsConsultationReply.helpful = goodsConsultationReply.helpful + 1
+        else: 
+            if cancel: goodsConsultationReply.unhelpful = goodsConsultationReply.unhelpful - 1
+            else: goodsConsultationReply.unhelpful = goodsConsultationReply.unhelpful + 1 
+    db.session.commit()   #提交事务
+    return True
+    
+def getConsultation(goods_id):
+    goodsConsultations = GoodsConsultation.query.filter_by(goods_id = goods_id).all()
+    data = []
+    for goodsConsultation in goodsConsultations:
+        goods_consultation_id = goodsConsultation.goods_consultation_id
+        
+        deliver_id = goodsConsultation.deliver_id
+        deliver = User.query.filter_by(user_id = deliver_id).first()
+        deliver_name = deliver.user_name
+    
+        picture_local_url = picturePath + deliver.picture_url
+        with open(picture_local_url,'rb') as file:
+            picture_byte_stream = file.read()
+        deliver_picture = base64.b64encode(picture_byte_stream).decode("ascii")
+        
+        comment = goodsConsultation.comment
+        comment_time = goodsConsultation.comment_time
+        helpful = goodsConsultation.helpful
+        unhelpful = goodsConsultation.unhelpful
+        replies = GoodsConsultationReply.query.filter_by(goods_consultation_id = goods_consultation_id).all()
+        data2 = []
+        for reply in replies:
+            reply_id = reply.goods_consultation_reply_id
+            deliver_id2 = reply.deliver_id
+            deliver2 = User.query.filter_by(user_id = deliver_id2).first()
+            deliver_name2 = deliver2.user_name
+        
+            picture_local_url2 = picturePath + deliver2.picture_url
+            with open(picture_local_url2,'rb') as file:
+                picture_byte_stream2 = file.read()
+            deliver_picture2 = base64.b64encode(picture_byte_stream2).decode("ascii")
+        
+            comment2 = reply.comment
+            comment_time2 = reply.comment_time
+            helpful2 = reply.helpful
+            unhelpful2 = reply.unhelpful
+            data2.append({"second_goods_comment_id":reply_id,"deliver_name":deliver_name2,"deliver_picture":deliver_picture2,"comment":comment2,
+                          "comment_time":comment_time2,"helpful":helpful2,"unhelpful":unhelpful2})
+        data.append({"goods_comment_id":goods_consultation_id,"deliver_name":deliver_name,"deliver_picture":deliver_picture,"comment":comment,
+                     "comment_time":comment_time,"helpful":helpful,"unhelpful":unhelpful,"reply":data2})
     return data

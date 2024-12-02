@@ -16,10 +16,10 @@ def login():
         if (data.get("isManager")) :
             return jsonify({"success":dbTools.mangerLoginJudge(data.get('manager_name'),data.get('password'))})    
         else:
-            # with open('backEnd\\uploads\\1.jpg','rb') as file:  # 在第一次登录后再注释掉
+            # with open('1.jpg','rb') as file:  # 在第一次登录后再注释掉
             #     a = file.read()
             # dbTools.reDefineUser({"user_id":1,"picture":a})
-            # with open('Code\\backEnd\\uploads\\0.jpg','rb') as file:
+            # with open('0.jpg','rb') as file:
             #     b = file.read()
             # addGoods(1,[b],"goods_name","category_name","goods_price","goods_description")
             return jsonify(dbTools.loginJudge(data.get('phone_number'),data.get('password')))    
@@ -36,7 +36,6 @@ def home():
     data = request.get_json()
     if type == 'user_picture':
         picture_url = getUserPicture(data.get("user_id"))      #本地图像路径
-        print(picture_url)
         type = get_type(picture_url)
         return send_file(picture_url, type)
     elif type == 'search':
@@ -45,9 +44,22 @@ def home():
         return jsonify({"goods":dbTools.searchGoodsCategory(data.get("category_name"))})
     elif type == 'announcement':
         return jsonify({"announcements":dbTools.getAnnouncement()})
-    else:
-        return jsonify({"error":"Unexpected error in /home"})
-    
+
+@app.route('/goods_detail', methods=['POST'])
+def goods_detail():
+    type = request.headers.get('type')
+    data = request.get_json()
+    if type == 'detail':
+        return jsonify(dbTools.getGoodsInfo(data.get("goods_id")))
+    elif type == 'comments':
+        return jsonify(dbTools.getConsultation(data.get("goods_id")))
+    elif type == 'commit_comment':
+        return jsonify({"success":dbTools.addConsultation(data.get("goods_id"),data.get("deliver_id"),data.get("comment"))})
+    elif type == 'commit_reply':
+        return jsonify({'success':dbTools.addConsultationReply(data.get('goods_comment_id'),data.get('deliver_id'),data.get('second_goods_comment'))})
+    elif type == 'like':
+        return jsonify({'success':dbTools.like(data.get("like"),data.get("level"),data.get("cancel"),data.get("id"))})
+
 def get_type(filename):
     # 根据文件扩展名返回对应的 MIME 类型
     if filename.lower().endswith(('.png')):
