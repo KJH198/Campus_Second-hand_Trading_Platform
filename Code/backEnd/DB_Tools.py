@@ -226,6 +226,12 @@ def getUnselledGoods(num):
         data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":picture})
         num -= 1
     return data
+
+def transb264(picture_byte_streams):
+    data = []
+    for picture_byte_stream in picture_byte_streams:
+        data.append(base64.b64encode(picture_byte_stream).decode("ascii"))
+    return data
     
 # 获取商品详情页
 def getGoodsInfo(goods_id):
