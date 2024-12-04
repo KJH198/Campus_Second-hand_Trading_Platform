@@ -1260,7 +1260,7 @@ export default {
       }
     }
 
-    // 处理地址选择
+    // 处理地址选
     function handleAddressSelect(address) {
       selectedAddress.value = address;
     }
