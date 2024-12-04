@@ -5,7 +5,7 @@ import base64
 import random
 
 # 自己修改为本地存储图片文件夹的绝对路径 + \\
-picturePath = 'C:\\Users\\kjh15\\Desktop\\Project\\Campus_Second-hand_Trading_Platform\\Code\\picture\\'
+picturePath = 'E:\\Junior_Autumn\\Database\\Final_Project\\Campus_Second-hand_Trading_Platform\\Code\\backEnd\\uploads\\'
 urlCnt = 0
 Default_url = 'default.jpg'
 
@@ -189,6 +189,7 @@ def deleteSinglePicture(url):
     
 # 修改商品信息
 def reDefineGoods(info):  # goods_id,seller_id,pictures,goods_name,category_name,goods_price,goods_description
+    #print(info)
     if (info.get("goods_id")): goods = Goods.query.filter_by(goods_id = info.get("goods_id")).first()
     else: return False
     if (info.get("seller_id")): goods.seller_id = info.get("seller_id")
@@ -196,14 +197,24 @@ def reDefineGoods(info):  # goods_id,seller_id,pictures,goods_name,category_name
     if (info.get("category_name")): goods.category_name = info.get("category_name")
     if (info.get("goods_price")): goods.goods_price = info.get("goods_price")
     if (info.get("goods_description")): goods.goods_description = info.get("goods_description")
-    if (info.get("pictures")):
+    if (info.get("goods_pictures")):
         goods_id = info.get("goods_id")
-        pictures = info.get("pictures")
+        # 删除该goods_id的原有图片
+        goods_pictures_url = Picture.query.filter_by(goods_id = goods_id).all()
+        for goods_picture_url in goods_pictures_url:
+            deleteSinglePicture(goods_picture_url.picture_url)
+
+        pictures = info.get("goods_pictures")
         pictures_type = info.get("pictures_type")
         size = len(pictures_type)
         for i in range(size):
-            addSinglePicture(goods_id,pictures[i],pictures_type[i])
+            addSinglePicture(goods_id,bytes(base64.b64decode(pictures[i])),pictures_type[i])
+    if (info.get("delete_pictures")):
+        delete_pictures = info.get("delete_pictures")
+        for delete_picture in delete_pictures:
+            deleteSinglePicture(delete_picture)
     db.session.commit()
+    print(info)
     return True
 
 # 随机获取在售商品预览页
@@ -228,6 +239,7 @@ def getUnselledGoods(num):
     return data
 
 def transb264(pictureFile):
+    
     picture_byte_stream = pictureFile.read()
     return base64.b64encode(picture_byte_stream).decode("ascii")
     
@@ -239,6 +251,8 @@ def getGoodsInfo(goods_id):
     goods_pictures_url = Picture.query.filter_by(goods_id = goods_id).all()
     pictures_list = [picturePath + goods_picture_url.picture_url for goods_picture_url in goods_pictures_url]
     pictures_byte_stream_list = []
+    #新加
+    pictures_type = [goods_picture_url.picture_url for goods_picture_url in goods_pictures_url]
     for picture_url in pictures_list:
         with open(picture_url,'rb') as file:
             picture_byte_stream = file.read()
@@ -261,7 +275,7 @@ def getGoodsInfo(goods_id):
     heat = goods.heat
     return {"goods_name":goods_name,"goods_price":goods_price,"goods_pictures":pictures_byte_stream_list,"seller_name":seller_name,
             "seller_picture":seller_picture,"begin_time":begin_time, "category_name":category_name,
-            "goods_description":goods_description,"goods_state":goods_state,"heat":heat}
+            "goods_description":goods_description,"goods_state":goods_state,"heat":heat, "pictures_type":pictures_type}
     
 # 按关键字搜索商品
 def searchGoods(info):

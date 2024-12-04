@@ -81,7 +81,7 @@ def user_profile():
     
 @app.route('/goods_picture_show', methods=['POST'])
 def goods_picture_show():
-    return jsonify({'success': True,'message': '上传成功','url':dbTools.transF264(request.files.get('file'))})
+    return jsonify({'success': True,'message': '上传成功','url':dbTools.transb264(request.files.get('file'))})
 
 def allowed_file(filename):
     # 检查文件扩展名是否允许

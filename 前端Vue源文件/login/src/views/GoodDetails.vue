@@ -273,8 +273,8 @@
           <el-input v-model="editForm.goods_name" />
         </el-form-item>
 
-        <el-form-item label="商品类别" prop="category">
-          <el-select v-model="editForm.category" placeholder="请选择商品类别">
+        <el-form-item label="商品类别" prop="category_name">
+          <el-select v-model="editForm.category_name" placeholder="请选择商品类别">
             <el-option label="体育运动" value="sport" />
             <el-option label="学习用品" value="study" />
             <el-option label="电子数码" value="digital" />
@@ -292,16 +292,16 @@
           />
         </el-form-item>
 
-        <el-form-item label="商品描述" prop="description">
+        <el-form-item label="商品描述" prop="goods_description">
           <el-input 
             type="textarea" 
-            v-model="editForm.description" 
+            v-model="editForm.goods_description" 
             rows="4"
           />
         </el-form-item>
 
-        <el-form-item label="商品状态" prop="status">
-          <el-select v-model="editForm.status" placeholder="请选择商品状态">
+        <el-form-item label="商品状态" prop="goods_state">
+          <el-select v-model="editForm.goods_state" placeholder="请选择商品状态">
             <el-option label="在售" value="on_sale" />
             <el-option label="已售出" value="sold" />
             <el-option label="下架" value="removed" />
@@ -315,6 +315,7 @@
             :show-file-list="true"
             :on-success="handleUploadSuccess"
             :on-error="handleUploadError"
+            :on-remove="handleRemove"
             :before-upload="beforeUpload"
             :file-list="fileList"
             multiple
@@ -1007,14 +1008,27 @@ export default {
     const editFormRef = ref(null);
     const isOwner = ref(route.query.isOwner === 'true');
     const fileList = ref([]);
+
+    function handleRemove(file) {
+      // 将被删除的图片记录到deleted_pictures中
+      const index = fileList.value.indexOf(file);
+      if (index !== -1) {
+        editForm.value.deleted_pictures.push(editForm.value.pictures_type[index]);
+        fileList.value.splice(index, 1);
+        editForm.value.goods_pictures.splice(index, 1);
+        editForm.value.pictures_type.splice(index, 1);
+      }
+    }
     
     const editForm = ref({
       goods_name: '',
-      category: '',
+      category_name: '',
       goods_price: 0,
-      description: '',
-      status: '',
-      pictures: []
+      goods_description: '',
+      goods_state: '',
+      goods_pictures: [],
+      pictures_type: [],
+      deleted_pictures: []
     });
 
     const editRules = {
@@ -1022,16 +1036,16 @@ export default {
         { required: true, message: '请输入商品名称', trigger: 'blur' },
         { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
       ],
-      category: [
+      category_name: [
         { required: true, message: '请选择商品类别', trigger: 'change' }
       ],
       goods_price: [
         { required: true, message: '请输入商品价格', trigger: 'blur' }
       ],
-      description: [
+      goods_description: [
         { required: true, message: '请输入商品描述', trigger: 'blur' }
       ],
-      status: [
+      goods_state: [
         { required: true, message: '请选择商品状态', trigger: 'change' }
       ]
     };
@@ -1058,27 +1072,32 @@ export default {
 
     const data = await response.json();
     
-    if (data.success) {
+    if (true) {
       // 使用后端返回的数据初始化表单
       editForm.value = {
         goods_name: data.goods_name,
-        category: data.category,
+        category_name: data.category_name,
         goods_price: parseFloat(data.goods_price),
-        description: data.goods_description,
-        status: data.status,
-        pictures: []  // 初始化空数组
+        goods_description: data.goods_description,
+        goods_state: data.goods_state,
+        goods_pictures: [],  // 初始化空数组
+        pictures_type:  [],
+        deleted_pictures: []
       };
+      console.log("editForm.value:", editForm.value);
 
       // 如果后端返回了图片数据，处理图片
-      if (Array.isArray(data.goods_pictures)) {
+      if (Array.isArray(data.goods_pictures) && Array.isArray(data.pictures_type)) {
         // 将base64图片数据转换为文件列表
         fileList.value = data.goods_pictures.map((pic, index) => ({
-          name: `商品图片${index + 1}`,
+          name: data.pictures_type[index],
           url: URL.createObjectURL(base64ToBlob(pic))
         }));
         
         // 保存图片数据到表单
-        editForm.value.pictures = data.goods_pictures;
+        editForm.value.goods_pictures = data.goods_pictures;
+        // 保存图片文件名到表单
+        editForm.value.pictures_type = data.pictures_type;
       }
 
       ElMessage.success('商品信息加载成功');
@@ -1095,7 +1114,10 @@ export default {
     function handleUploadSuccess(response, file) {
       if (response.success) {
         console.log("response.url:", response.url);
-        editForm.value.pictures.push(response.url);
+        editForm.value.goods_pictures.push(response.url);
+        // 保存图片文件名到表单
+        console.log("file.name:", file.name);
+        editForm.value.pictures_type.push(file.name);
         ElMessage.success('图片上传成功');
       } else {
         ElMessage.error(response.message || '上传失败');
@@ -1127,6 +1149,7 @@ export default {
       
       try {
         await editFormRef.value.validate();
+        //const pictures_type = fileList.value.map(file => file.name);
         
         const response = await fetch("/goods_detail", {
           method: 'POST',
@@ -1135,12 +1158,22 @@ export default {
             'type': 'update_goods'
           },
           body: JSON.stringify({
-            goods_id: route.params.productId,
-            ...editForm.value
+            //goods_id: route.params.productId,
+            info: {
+              goods_id: route.params.productId,
+              goods_name: editForm.value.goods_name,
+              category_name: editForm.value.category_name,
+              goods_price: editForm.value.goods_price,
+              goods_description: editForm.value.goods_description,
+              goods_state: editForm.value.goods_state,
+              goods_pictures: editForm.value.goods_pictures,
+              pictures_type: editForm.value.pictures_type,
+              deleted_pictures: editForm.value.deleted_pictures
+            }
           })
         });
         console.log("editForm.value:", editForm.value);
-
+        console.log("response:", response);
         if (!response.ok) throw new Error('更新失败');
 
         const data = await response.json();
@@ -1148,7 +1181,7 @@ export default {
           ElMessage.success('商品信息更新成功');
           showEditDialog.value = false;
           // 刷新商品信息
-          fetchProductDetails();
+          await fetchGoodsDetail();
         } else {
           ElMessage.error(data.message || '更新失败');
         }
@@ -1227,7 +1260,8 @@ export default {
       submitEdit,
       handleCloseEdit,
       initEditForm,
-      uploadUrl
+      uploadUrl,
+      handleRemove
     };
   }
 };
