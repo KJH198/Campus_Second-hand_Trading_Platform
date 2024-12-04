@@ -196,7 +196,14 @@ def reDefineGoods(info):  # goods_id,seller_id,pictures,goods_name,category_name
     if (info.get("category_name")): goods.category_name = info.get("category_name")
     if (info.get("goods_price")): goods.goods_price = info.get("goods_price")
     if (info.get("goods_description")): goods.goods_description = info.get("goods_description")
-    if (info.get("pictures")): return "TODO"
+    if (info.get("pictures")):
+        goods_id = info.get("goods_id")
+        pictures = info.get("pictures")
+        pictures_type = info.get("pictures_type")
+        size = len(pictures_type)
+        for i in range(size):
+            addSinglePicture(goods_id,pictures[i],pictures_type[i])
+    db.session.commit()
     return True
 
 # 随机获取在售商品预览页
