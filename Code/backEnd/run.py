@@ -60,6 +60,8 @@ def goods_detail():
         return jsonify({'success':dbTools.addConsultationReply(data.get('goods_comment_id'),data.get('deliver_id'),data.get('second_goods_comment'))})
     elif type == 'like':
         return jsonify({'success':dbTools.like(data.get("like"),data.get("level"),data.get("cancel"),data.get("id"))})
+    elif type == 'update_goods':
+        return jsonify({'success':dbTools.reDefineGoods(data.get("info"))})
 
 @app.route('/user_profile', methods=['POST'])
 def user_profile():
@@ -77,17 +79,19 @@ def user_profile():
     elif type == 'update_avatar':
         pass
     
-@app.route('/goods_picture_upload', methods=['POST'])
-def goods_picture_upload():
+@app.route('/goods_picture_show', methods=['POST'])
+def goods_picture_show():
     #TODO: 上传图片
     print("ok")
     return jsonify({"success":True})
+
 
 def allowed_file(filename):
     # 检查文件扩展名是否允许
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 def begin():
     DB_Initiator.init()
