@@ -108,7 +108,7 @@
               type="primary"
               class="purchase-button"
               :disabled="isProcessing"
-              @click="handlePurchase"
+              @click="showAddressSelection"
             >
               <el-icon><ShoppingCart /></el-icon>
               {{ isProcessing ? '处理中...' : '现在下单' }}
@@ -421,6 +421,52 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 添加地址选择对话框 -->
+    <el-dialog
+      v-model="showAddressDialog"
+      title="选择收货地址"
+      width="50%"
+    >
+      <el-table
+        :data="addressList"
+        style="width: 100%"
+        highlight-current-row
+        @current-change="handleAddressSelect"
+      >
+        <el-table-column
+          type="selection"
+          width="55"
+        />
+        <el-table-column
+          prop="receiver_name"
+          label="收货人"
+          width="120"
+        />
+        <el-table-column
+          prop="phone_number"
+          label="联系电话"
+          width="150"
+        />
+        <el-table-column
+          prop="address"
+          label="收货地址"
+        />
+      </el-table>
+      
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showAddressDialog = false">取消</el-button>
+          <el-button 
+            type="primary" 
+            @click="confirmOrder"
+            :disabled="!selectedAddress"
+          >
+            确认下单
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -440,7 +486,7 @@ import {
   Star, 
   Calendar, 
   Phone, 
-  Position,     // 使用 Position 图标来模���拇指
+  Position,     // 使用 Position 图标来模拇指
   Edit, 
   Plus,
   ShoppingCart,
@@ -944,7 +990,7 @@ export default {
             body: JSON.stringify({
               like: false,
               level: level,
-              id: rawId,  // 使用原始ID
+              id: rawId,  // ���用原始ID
               cancel: currentAction === 'dislike'
             })
           });
@@ -1186,8 +1232,50 @@ export default {
     // 添加订单处理相关的响应式变量
     const isProcessing = ref(false);
     
-    // 添加购买处理函数
-    async function handlePurchase() {
+    // 添加地址相关的响应式变量
+    const showAddressDialog = ref(false);
+    const addressList = ref([]);
+    const selectedAddress = ref(null);
+    
+    // 显示地址选择对话框并获取地址列表
+    async function showAddressSelection() {
+      try {
+        const response = await fetch("/goods_detail", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'getaddress'
+          },
+          body: JSON.stringify({
+            buyer_id: route.query.current_user_id
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch addresses');
+        }
+
+        const data = await response.json();
+        addressList.value = data;
+        showAddressDialog.value = true;
+      } catch (error) {
+        console.error('Error fetching addresses:', error);
+        ElMessage.error('获取地址列表失败，请重试');
+      }
+    }
+
+    // 处理地址选择
+    function handleAddressSelect(address) {
+      selectedAddress.value = address;
+    }
+
+    // 修改购买处理函数
+    async function confirmOrder() {
+      if (!selectedAddress.value) {
+        ElMessage.warning('请选择收货地址');
+        return;
+      }
+      
       if (isProcessing.value) return;
       
       try {
@@ -1201,7 +1289,8 @@ export default {
           },
           body: JSON.stringify({
             goods_id: route.params.productId,
-            buyer_id: route.query.current_user_id
+            buyer_id: route.query.current_user_id,
+            address_id: selectedAddress.value.address_id
           })
         });
 
@@ -1213,13 +1302,14 @@ export default {
         
         if (data.success) {
           ElMessage.success('下单成功！');
+          showAddressDialog.value = false;
           // 可以在这里添加跳转到订单页面或其他后续操作
         } else {
           ElMessage.error('下单失败，请重试');
         }
       } catch (error) {
         console.error('Error creating order:', error);
-        ElMessage.error('网络似乎出了点问题');
+        ElMessage.error('下单失败，请稍后重试');
       } finally {
         isProcessing.value = false;
       }
@@ -1304,7 +1394,6 @@ export default {
         } else if (reportForm.value.type === 'comment') {
           reportData.goods_comment_id = reportForm.value.goods_comment_id;
         } else if (reportForm.value.type === 'reply') {
-          reportData.goods_comment_id = reportForm.value.goods_comment_id;
           reportData.second_goods_comment_id = reportForm.value.second_goods_comment_id;
         }
 
@@ -1398,7 +1487,12 @@ export default {
       initEditForm,
       uploadUrl,
       isProcessing,
-      handlePurchase,
+      showAddressDialog,
+      addressList,
+      selectedAddress,
+      showAddressSelection,
+      handleAddressSelect,
+      confirmOrder,
       isCollected,
       handleCollect,
       showReportDialog,
@@ -2117,7 +2211,7 @@ export default {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 20px;
+  padding-top: 20px;
 }
 
 .purchase-button {
@@ -2282,5 +2376,19 @@ export default {
 
 .el-icon {
   margin-right: 4px;
+}
+
+/* 自定义表格样式 */
+:deep(.el-table) {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+:deep(.el-table__row) {
+  cursor: pointer;
+}
+
+:deep(.el-table__row.current-row) {
+  background-color: #fdf6ec;
 }
 </style> 
