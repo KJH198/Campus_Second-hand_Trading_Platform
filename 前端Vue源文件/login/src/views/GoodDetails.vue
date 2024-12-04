@@ -435,10 +435,6 @@
         @current-change="handleAddressSelect"
       >
         <el-table-column
-          type="selection"
-          width="55"
-        />
-        <el-table-column
           prop="receiver_name"
           label="收货人"
           width="120"
@@ -990,7 +986,7 @@ export default {
             body: JSON.stringify({
               like: false,
               level: level,
-              id: rawId,  // ���用原始ID
+              id: rawId,  // 用原始ID
               cancel: currentAction === 'dislike'
             })
           });
