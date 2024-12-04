@@ -15,12 +15,6 @@ def login():
         if (data.get("isManager")) :
             return jsonify({"success":dbTools.mangerLoginJudge(data.get('manager_name'),data.get('password'))})    
         else:
-            # with open('1.jpg','rb') as file:  # 在第一次登录后再注释掉
-            #     a = file.read()
-            # dbTools.reDefineUser({"user_id":1,"picture":a})
-            # with open('0.jpg','rb') as file:
-            #     b = file.read()
-            # addGoods(1,[b],"goods_name","category_name","goods_price","goods_description")
             return jsonify(dbTools.loginJudge(data.get('phone_number'),data.get('password')))    
     elif type == 'register':
         return jsonify({"success":dbTools.register(data.get('user_name'),data.get('phone_number'),data.get('password'))})    
@@ -51,7 +45,7 @@ def goods_detail():
     type = request.headers.get('type')
     data = request.get_json()
     if type == 'detail':
-        return jsonify(dbTools.getGoodsInfo(data.get("goods_id")))
+        return jsonify(dbTools.getGoodsInfo(data.get("goods_id"),data.get("user_id")))
     elif type == 'comments':
         return jsonify(dbTools.getConsultation(data.get("goods_id")))
     elif type == 'commit_comment':
@@ -62,6 +56,17 @@ def goods_detail():
         return jsonify({'success':dbTools.like(data.get("like"),data.get("level"),data.get("cancel"),data.get("id"))})
     elif type == 'update_goods':
         return jsonify({'success':dbTools.reDefineGoods(data.get("info"))})
+    elif type == 'createorder':
+        return jsonify({"success":dbTools.buyGoods(data.get("goods_id"),data.get("buyer_id"))})
+    elif type == 'collect':
+        if data.get('collect'):
+            return jsonify({"success":dbTools.addcollection(data.get("goods_id"),data.get("user_id"))})
+        else:
+            return jsonify({"success":dbTools.cancelCollection(data.get("goods_id"),data.get("user_id"))})
+    elif type == 'accuse':
+        return jsonify({"success":dbTools.sendAccusation(data)})
+    elif type == 'getaddress':
+        return jsonify(dbTools.getAddress(data.get('buyer_id')))
 
 @app.route('/user_profile', methods=['POST'])
 def user_profile():
@@ -93,4 +98,4 @@ def allowed_file(filename):
 def begin():
     DB_Initiator.init()
     with app.app_context():
-        app.run(debug=True)
+        app.run()
