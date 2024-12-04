@@ -1,9 +1,7 @@
 import backEnd.DB_Initiator as DB_Initiator
 from backEnd.DB_Initiator import app
 import backEnd.DB_Tools as dbTools
-from backEnd.DB_Tools import getUserPicture
 from flask import request,render_template,jsonify, send_file
-import json
 
 
 @app.route('/', methods=['GET','POST'])
@@ -14,9 +12,7 @@ def login():
     type = request.headers.get('type')
     data = request.get_json()
     if type == 'login':
-        print('login')
         if (data.get("isManager")) :
-            print("manager")
             return jsonify({"success":dbTools.mangerLoginJudge(data.get('manager_name'),data.get('password'))})    
         else:
             # with open('1.jpg','rb') as file:  # 在第一次登录后再注释掉
@@ -33,14 +29,14 @@ def login():
 @app.route('/home', methods=['GET','POST'])
 def home():
     if request.method == 'GET':
-        return jsonify({"goods":dbTools.getUnselledGoods(160)})
+        return jsonify({"goods":dbTools.getUnselledGoods(80)})
     
     type = request.headers.get('type')
     data = request.get_json()
     if type == 'user_picture':
-        picture_url = getUserPicture(data.get("user_id"))      #本地图像路径
-        type = get_type(picture_url)
-        return send_file(picture_url, type)
+        picture_url = dbTools.getUserPictureURL(data.get("user_id"))
+        fileType = dbTools.getFileType(picture_url)
+        return send_file(picture_url, fileType)
     elif type == 'search':
         return jsonify({"goods":dbTools.searchGoods(data.get("query"))})
     elif type == 'category_search':
@@ -74,13 +70,12 @@ def user_profile():
     elif type == 'get_user_goods':
         return jsonify({"success":True, "goods":dbTools.getUserGoods(data.get('user_id'))})
     elif type == 'update_profile':
-        info = {'user_id':data['user_id'], 'user_name':data['user_name'], 'phone_number':data['phone_number'], 'other_information':data['other_information']}
-        print(info)
-        return jsonify({"success":dbTools.updateProfile(info)})
+        info = {'user_id':data.get('user_id'), 'user_name':data.get('user_name'), 
+                'password':data.get('password'), 'phone_number':data.get('phone_number'),
+                'other_information':data.get('other_information')}
+        return jsonify({"success":dbTools.reDefineUser(info)})
     elif type == 'update_avatar':
         pass
-    else:
-        return jsonify({"error":"Unexpected error in /user_profile"})
     
 @app.route('/goods_picture_upload', methods=['POST'])
 def goods_picture_upload():
@@ -93,17 +88,6 @@ def allowed_file(filename):
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def get_type(filename):
-    # 根据文件扩展名返回对应的 MIME 类型
-    if filename.lower().endswith(('.png')):
-        return 'image/png'
-    elif filename.lower().endswith(('.jpg', '.jpeg')):
-        return 'image/jpeg'
-    elif filename.lower().endswith(('.gif')):
-        return 'image/gif'
-    return 'application/octet-stream'  # 默认二进制流类型
-
 
 def begin():
     DB_Initiator.init()

@@ -1,11 +1,13 @@
+import os
 from backEnd.DB_Initiator import db,User,Manager,Log,Address,Goods,Order,Message,OrderComment,SecondaryOrderComment,GoodsConsultation,GoodsConsultationReply,Collection,Accusation,Announcement,Picture
 from datetime import datetime
 import base64
 import random
 
 # 自己修改为本地存储图片文件夹的绝对路径 + \\
-picturePath = 'E:\\Junior_Autumn\\Database\\Final_Project\\Campus_Second-hand_Trading_Platform\\Code\\backEnd\\uploads\\'
+picturePath = 'C:\\Users\\kjh15\\Desktop\\Project\\Campus_Second-hand_Trading_Platform\\Code\\picture\\'
 urlCnt = 0
+Default_url = 'default.jpg'
 
 # 添加管理员
 def addManagers(mangers):  
@@ -28,7 +30,8 @@ def register(user_name,phone_number,password):
     newUser = User(
             user_name = user_name,
             phone_number = phone_number,
-            password = password)
+            password = password, 
+            picture_url = Default_url)
     db.session.add(newUser)
     db.session.commit()
     return True
@@ -40,29 +43,52 @@ def reDefineUser(info): # user_id, user_name, password, picture, pictureName, ot
     if (info.get("user_name")): user.user_name = info.get("user_name")
     if (info.get("password")): user.password = info.get("password")
     if (info.get("picture")): 
-        x = urlGenerator(info.get("picture"),info.get("pictureName"))
+        picture = info.get("picture")
+        pictureName = info.get("pictureName")
+        x = urlGenerator(picture,pictureName)
+        deleteUserPicture(user.user_id)
         user.picture_url = x
     if (info.get("other_information")): user.other_information = info.get("other_information")
+    db.session.commit()
     return True
 
 # 生成图片URL
 def urlGenerator(binaryPicture,pictureName):
     global urlCnt
     global picturePath
-    local_picture_name = str(urlCnt) + get_type(pictureName)
+    local_picture_name = str(urlCnt) + getPicturetype(pictureName)
     with open(picturePath+local_picture_name, 'wb') as file:     # 二进制写入
         file.write(binaryPicture)
     urlCnt += 1
     return local_picture_name
 
-def get_type(pictureName):
-    # 根据文件扩展名返回对应的 MIME 类型
+# 删除用户图片
+def deleteUserPicture(user_id):
+    user = User.query.filter_by(user_id = user_id).first()
+    full_url = picturePath + user.picture_url
+    os.remove(full_url)
+    user.picture_url = Default_url
+    db.session.commit()
+    return True
+
+# 根据文件扩展名返回对应的图片类型
+def getPicturetype(pictureName):
     if pictureName.lower().endswith(('.png')):
         return '.png'
     elif pictureName.lower().endswith(('.jpg', '.jpeg')):
         return '.jpeg'
     elif pictureName.lower().endswith(('.gif')):
         return '.gif'
+    
+def getFileType(filename):
+    # 根据文件扩展名返回对应的 MIME 类型
+    if filename.lower().endswith(('.png')):
+        return 'image/png'
+    elif filename.lower().endswith(('.jpg', '.jpeg')):
+        return 'image/jpeg'
+    elif filename.lower().endswith(('.gif')):
+        return 'image/gif'
+    return 'application/octet-stream'  # 默认二进制流类型
 
 # 用户信息校验
 def loginJudge(phone_number,password):
@@ -84,9 +110,8 @@ def addLog(user,log_state):
     db.session.commit()
     return True
 
-# 获得用户头像
-def getUserPicture(user_id):
-    print(user_id)
+# 获得用户头像本地地址
+def getUserPictureURL(user_id):
     user = User.query.filter_by(user_id = user_id).first()
     return picturePath + user.picture_url
 
@@ -102,18 +127,6 @@ def getUserInfo(user_id):
     base64_str = base64.b64encode(picture_byte_stream).decode("ascii")
     other_information = user.other_information
     return {"success":True, "phone_number":phone_number,"user_name":user_name,"password":password,"picture_url":base64_str,"other_information":other_information}
-
-#在profile页面中修改用户信息（用户名，手机号，简介）
-def updateProfile(info):
-    print(info)
-    if (info.get("user_id")): user = User.query.filter_by(user_id = info.get("user_id")).first()
-    else: return False
-    if (info.get("user_name")): user.user_name = info.get("user_name")
-    if (info.get("phone_number")): user.phone_number = info.get("phone_number")
-    if (info.get("other_information")): user.other_information = info.get("other_information")
-    if (info.get("password")): user.password = info.get("password")
-    db.session.commit()
-    return True
 
 #获取用户发布的商品
 def getUserGoods(user_id):
@@ -139,33 +152,41 @@ def getUserGoods(user_id):
 
 ################################################################################################################
 # 添加商品
-def addGoods(seller_id,pictures,goods_name,category_name,goods_price,goods_description):
+def addGoods(seller_id):
     newGoods = Goods(
         seller_id = seller_id,
         begin_time = datetime.now(),
-        goods_name = goods_name,
-        category_name = category_name,
-        goods_price = goods_price,
-        goods_description = goods_description,
+        goods_name = '',
+        category_name = '',
+        goods_price = '',
+        goods_description = '',
         goods_state = "在售",
         heat = 0
     )
     db.session.add(newGoods)
     db.session.commit()
-    for picture in pictures:
-        addPicture(newGoods,picture)
-        return True
+    return newGoods.goods_id
 
-# 为商品添加图片
-def addPicture(goods,picture,pictureName):
+# 为商品添加单个图片
+def addSinglePicture(goods_id,picture,pictureName):
     url = urlGenerator(picture,pictureName)
     newPicture = Picture(
         picture_url = url, 
-        goods_id = goods.goods_id
+        goods_id = goods_id
     )
     db.session.add(newPicture)
     db.session.commit()
+    return True
 
+# 删除单个商品图片
+def deleteSinglePicture(url):
+    picture = Picture.query.filter_by(picture_url = url).first()
+    db.session.delete(picture)
+    db.session.commit()
+    full_url = picturePath + url
+    os.remove(full_url)
+    return True
+    
 # 修改商品信息
 def reDefineGoods(info):  # goods_id,seller_id,pictures,goods_name,category_name,goods_price,goods_description
     if (info.get("goods_id")): goods = Goods.query.filter_by(goods_id = info.get("goods_id")).first()
@@ -175,10 +196,7 @@ def reDefineGoods(info):  # goods_id,seller_id,pictures,goods_name,category_name
     if (info.get("category_name")): goods.category_name = info.get("category_name")
     if (info.get("goods_price")): goods.goods_price = info.get("goods_price")
     if (info.get("goods_description")): goods.goods_description = info.get("goods_description")
-    if (info.get("pictures")):
-        old_pictures = Picture.query.filter_by(goods_id = info.get("goods_id")).all()
-        db.session.delete(old_pictures)
-        for picture in info.get("pictures"): addPicture(goods,picture)
+    if (info.get("pictures")): return "TODO"
     return True
 
 # 随机获取在售商品预览页
@@ -362,8 +380,99 @@ def getConsultation(goods_id):
             comment_time2 = reply.comment_time
             helpful2 = reply.helpful
             unhelpful2 = reply.unhelpful
-            data2.append({"second_goods_comment_id":reply_id,"deliver_name":deliver_name2,"deliver_picture":deliver_picture2,"comment":comment2,
-                          "comment_time":comment_time2,"helpful":helpful2,"unhelpful":unhelpful2})
-        data.append({"goods_comment_id":goods_consultation_id,"deliver_name":deliver_name,"deliver_picture":deliver_picture,"comment":comment,
-                     "comment_time":comment_time,"helpful":helpful,"unhelpful":unhelpful,"reply":data2})
+            data2.append({"second_goods_comment_id":reply_id,"deliver_name":deliver_name2,
+                          "deliver_picture":deliver_picture2,"comment":comment2,"comment_time":comment_time2,
+                          "helpful":helpful2,"unhelpful":unhelpful2})
+        data.append({"goods_comment_id":goods_consultation_id,"deliver_name":deliver_name,
+                     "deliver_picture":deliver_picture,"comment":comment,"comment_time":comment_time,
+                     "helpful":helpful,"unhelpful":unhelpful,"reply":data2})
     return data
+
+##################################################################################################################################
+def addOrderComment(goods_id,order_grade,comment):
+    newOrderComment = OrderComment(
+        goods_id = goods_id,
+        order_grade = order_grade,
+        comment = comment,
+        comment_time = datetime.now(),
+        helpful = 0,
+        unhelpful = 0
+    )
+    db.session.add(newOrderComment)
+    db.session.commit()
+    return True
+
+def addSecondaryOrderComment(deliver_id,order_comment_id,comment):
+    newSecondaryOrderComment = SecondaryOrderComment(
+        deliver_id = deliver_id,
+        order_comment_id = order_comment_id,
+        comment = comment,
+        comment_time = datetime.now(),
+        helpful = 0,
+        unhelpful = 0
+    )
+    db.session.add(newSecondaryOrderComment)
+    db.session.commit()
+    return True
+###########################################################################################################################
+def sendMessage(deliver_id,receiver_id,content):
+    newMessage = Message(
+        deliver_id = deliver_id,
+        receiver_id = receiver_id,
+        deliver_time = datetime.now(),
+        content = content
+    )
+    db.session.add(newMessage)
+    db.session.commit()
+    return True
+
+def checkMessage(this_id,other_id):
+    data = []
+    messages = Message.query.filter_by(deliver_id = this_id,receiver_id = other_id).all()
+    data1 = [{"message_id":message.message_id,"side":"this","content":message.content,
+              "deliver_time":message.deliver_time} for message in messages]
+    messages = Message.query.filter_by(deliver_id = other_id,receiver_id = this_id).all()
+    data2 = [{"message_id":message.message_id,"side":"other","content":message.content,
+              "deliver_time":message.deliver_time} for message in messages]
+    data.append(data1)
+    data.append(data2)
+    return sorted(data,key = lambda i: i['deliver_time'])
+
+def deleteMessage(user_id,message_id):
+    message = Message.query.filter_by(message_id = message_id).first()
+    if message.deliver_id == user_id:
+        db.session.delete(message)
+        db.session.commit()
+        return True
+    return False
+    
+################################################################################################################################
+def sendAnnouncement(manger_name,title,content):
+    newAnnouncement = Announcement(
+        manger_name = manger_name,
+        deliver_time = datetime.now(),
+        title = title,
+        content = content,
+    )
+    db.session.add(newAnnouncement)
+    db.session.commit()
+    return True
+
+def getAllAnnouncement():
+    announcements = Announcement.query.all()
+    data = [{"manger_name":announcement.manger_name,"deliver_time":announcement.deliver_time,"title":announcement.title,"content":announcement.content} for announcement in announcements]
+    return data
+
+def getMangerAnnouncement(manger_name):
+    announcements = Announcement.query.filter_by(manger_name = manger_name).all()
+    data = [{"announcement_id":announcement.announcement_id,"manger_name":announcement.manger_name,
+             "deliver_time":announcement.deliver_time,"title":announcement.title,"content":announcement.content} 
+            for announcement in announcements]
+    return data
+
+def deleteAnnouncement(announcement_id):
+    announcement = Announcement.query.filter_by(announcement_id = announcement_id).first()
+    db.session.delete(announcement)
+    db.session.commit()
+    return True
+    
