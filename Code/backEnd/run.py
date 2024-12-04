@@ -15,13 +15,6 @@ def login():
         if (data.get("isManager")) :
             return jsonify({"success":dbTools.mangerLoginJudge(data.get('manager_name'),data.get('password'))})    
         else:
-            # with open('1.jpg','rb') as file:  # 在第一次登录后再注释掉
-            #     a = file.read()
-            # dbTools.reDefineUser({"user_id":1,"picture":a})
-            # with open('0.jpg','rb') as file:
-            #     b = file.read()
-            # addGoods(1,[b],"goods_name","category_name","goods_price","goods_description")
-            # dbTools.addAddress('1','222','150','北航')
             return jsonify(dbTools.loginJudge(data.get('phone_number'),data.get('password')))    
     elif type == 'register':
         return jsonify({"success":dbTools.register(data.get('user_name'),data.get('phone_number'),data.get('password'))})    
