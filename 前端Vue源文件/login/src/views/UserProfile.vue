@@ -60,11 +60,15 @@
               <p><strong>简介：</strong>{{ userForm.other_information }}</p>
               <el-button type="primary" @click="openEditDialog">编辑信息</el-button>
             </div>
+            
           </div>
   
           <!-- 右侧商品列表 -->
           <div class="my-goods-section">
-            <h2 class="section-title">我发布的商品</h2>
+            <div class="section-header">
+              <h2 class="section-title">我发布的商品</h2>
+              <el-button type="primary" @click="openPublishDialog">发布商品</el-button>
+            </div>
             <div class="goods-grid">
               <div 
                 v-for="good in paginatedGoods" 
@@ -182,20 +186,90 @@
         </template>
       </el-dialog>
     </div>
+
+    <!-- 添加发布商品对话框 -->
+    <el-dialog
+      v-model="showPublishDialog"
+      title="发布新商品"
+      width="50%"
+      :before-close="handleClosePublish"
+    >
+      <el-form 
+        :model="publishForm" 
+        :rules="publishRules"
+        ref="publishFormRef"
+        label-width="100px"
+      >
+        <el-form-item label="商品名称" prop="goods_name">
+          <el-input v-model="publishForm.goods_name" />
+        </el-form-item>
+
+        <el-form-item label="商品类别" prop="category">
+          <el-select v-model="publishForm.category" placeholder="请选择商品类别">
+            <el-option label="篮球" value="篮球" />
+            <el-option label="学习" value="学习" />
+            <el-option label="数码" value="数码" />
+            <el-option label="衣物" value="衣物" />
+            <el-option label="其他" value="其他" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="商品价格" prop="goods_price">
+          <el-input v-model="publishForm.goods_price" type="number" />
+        </el-form-item>
+
+        <el-form-item label="商品描述" prop="description">
+          <el-input v-model="publishForm.description" type="textarea" />
+        </el-form-item>
+
+        <el-form-item label="商品状态" prop="status">
+          <el-select v-model="publishForm.status" placeholder="请选择商品状态">
+            <el-option label="在售" value="在售" />
+            <el-option label="已售出" value="已售出" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="商品图片">
+          <el-upload
+            class="goods-uploader"
+            :action="uploadUrl"
+            :headers="uploadHeaders"
+            :data="uploadData"
+            :show-file-list="true"
+            :on-success="handleUploadSuccess"
+            :on-error="handleUploadError"
+            :before-upload="beforeUpload"
+            :file-list="fileList"
+            multiple
+            list-type="picture-card"
+          >
+            <el-icon><Plus /></el-icon>
+          </el-upload>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="handleClosePublish">取消</el-button>
+          <el-button type="primary" @click="submitPublish">发布</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </template>
   
   <script>
   import { ref, computed, onMounted } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { ElMessage } from 'element-plus';
-  import { Bell, Camera } from '@element-plus/icons-vue';
+  import { Bell, Camera, Plus } from '@element-plus/icons-vue';
   import defaultAvatar from '@/assets/tubiao.png';
   
   export default {
     name: 'UserProfile',
     components: {
       Bell,
-      Camera
+      Camera,
+      Plus
     },
     setup() {
       const route = useRoute();
@@ -499,6 +573,126 @@
         fetchFavorites();
       });
   
+      // 添加发布商品相关的响应式变量
+      const showPublishDialog = ref(false);
+      const publishFormRef = ref(null);
+      const fileList = ref([]);
+
+      const publishForm = ref({
+        goods_name: '',
+        category: '',
+        goods_price: '',
+        description: '',
+        status: '在售',
+        pictures: []
+      });
+
+      const publishRules = {
+        goods_name: [
+          { required: true, message: '请输入商品名称', trigger: 'blur' },
+          { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
+        ],
+        category: [
+          { required: true, message: '请选择商品类别', trigger: 'change' }
+        ],
+        goods_price: [
+          { required: true, message: '请输入商品价格', trigger: 'blur' }
+        ],
+        description: [
+          { required: true, message: '请输入商品描述', trigger: 'blur' }
+        ],
+        status: [
+          { required: true, message: '请选择商品状态', trigger: 'change' }
+        ]
+      };
+
+      // 上传相关配置
+      const uploadUrl = 'http://localhost:8080/goods_detail';
+      const uploadHeaders = {
+        'type': 'upload_picture'
+      };
+      const uploadData = computed(() => ({
+        user_id: route.query.user_id
+      }));
+
+      // 处理函数
+      function openPublishDialog() {
+        showPublishDialog.value = true;
+      }
+
+      function handleClosePublish() {
+        publishFormRef.value?.resetFields();
+        fileList.value = [];
+        publishForm.value.pictures = [];
+        showPublishDialog.value = false;
+      }
+
+      function handleUploadSuccess(response, file) {
+        if (response.success) {
+          publishForm.value.pictures.push(response.url);
+          ElMessage.success('图片上传成功');
+        } else {
+          ElMessage.error(response.message || '上传失败');
+        }
+      }
+
+      function handleUploadError(error) {
+        console.error('Upload error:', error);
+        ElMessage.error('图片上传失败，请重试');
+      }
+
+      function beforeUpload(file) {
+        const isImage = file.type.startsWith('image/');
+        const isLt5M = file.size / 1024 / 1024 < 5;
+
+        if (!isImage) {
+          ElMessage.error('只能上传图片文件!');
+          return false;
+        }
+        if (!isLt5M) {
+          ElMessage.error('图片大小不能超过 5MB!');
+          return false;
+        }
+        return true;
+      }
+
+      async function submitPublish() {
+        if (!publishFormRef.value) return;
+
+        try {
+          await publishFormRef.value.validate();
+          
+          const response = await fetch("/goods_detail", {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'type': 'create_goods'
+            },
+            body: JSON.stringify({
+              user_id: route.query.user_id,
+              ...publishForm.value
+            })
+          });
+
+          if (!response.ok) throw new Error('发布失败');
+
+          const data = await response.json();
+          if (data.success) {
+            ElMessage.success('商品发布成功');
+            handleClosePublish();
+            // 刷新商品列表
+            if (typeof fetchMyGoods === 'function') {
+              await fetchMyGoods();
+            }
+          } else {
+            ElMessage.error(data.message || '发布失败');
+          }
+        } catch (error) {
+          console.error('Error publishing goods:', error);
+          ElMessage.error('发布失败，请重试');
+        }
+      }
+  
       return {
         userAvatar,
         userForm,
@@ -525,7 +719,21 @@
         editFormRef,
         editRules,
         favorites,
-        goToGoodsDetails
+        goToGoodsDetails,
+        showPublishDialog,
+        publishForm,
+        publishFormRef,
+        publishRules,
+        fileList,
+        uploadUrl,
+        uploadHeaders,
+        uploadData,
+        openPublishDialog,
+        handleClosePublish,
+        handleUploadSuccess,
+        handleUploadError,
+        beforeUpload,
+        submitPublish
       };
     }
   };
@@ -638,11 +846,15 @@
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   }
   
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
   .section-title {
-    margin: 0 0 20px 0;
-    color: #333;
-    font-size: 18px;
-    font-weight: bold;
+    margin: 0;
   }
   
   .goods-grid {

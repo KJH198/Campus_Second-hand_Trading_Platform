@@ -82,11 +82,11 @@ def user_profile():
     else:
         return jsonify({"error":"Unexpected error in /user_profile"})
     
-@app.route('/goods_picture_upload', methods=['POST'])
+@app.route('/goods_picture_show', methods=['POST'])
 def goods_picture_upload():
     #TODO: 上传图片
     print("ok")
-    return jsonify({"success":True})
+    return jsonify({"success":True, "url":1})
 
 def allowed_file(filename):
     # 检查文件扩展名是否允许
