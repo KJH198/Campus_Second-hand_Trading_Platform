@@ -396,7 +396,7 @@ export default {
     const comments = ref([]);
     const commentActions = ref(new Map()); // 用于存储用户对每条评论的操作状态
 
-    const uploadUrl = '/goods_picture_upload';
+    const uploadUrl = '/goods_picture_show';
 
     // 添加回复相关的响应式变量
     const activeReplyId = ref(null);  // 当前正在回复的评论ID
@@ -1037,24 +1037,64 @@ export default {
     };
 
     // 初始化编辑表单
-    function initEditForm() {
+    //TODO
+    async function initEditForm() {
+      try {
+    // 发送请求获取商品详细信息
+    const response = await fetch("/goods_detail", {
+      method: "POST",
+      headers: {
+        'Content-Type': 'application/json',
+        'type': 'detail'  // 用于后端识别请求类型
+      },
+      body: JSON.stringify({
+        goods_id: route.params.productId
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch goods detail');
+    }
+
+    const data = await response.json();
+    
+    if (data.success) {
+      // 使用后端返回的数据初始化表单
       editForm.value = {
-        goods_name: goodsName.value,
-        category: '', // 需要从后端获取
-        goods_price: parseFloat(goodsPrice.value),
-        description: goodsDescription.value,
-        status: '', // 需要从后端获取
-        pictures: goodsPictures.value.map(url => ({ url }))
+        goods_name: data.goods_name,
+        category: data.category,
+        goods_price: parseFloat(data.goods_price),
+        description: data.goods_description,
+        status: data.status,
+        pictures: []  // 初始化空数组
       };
-      fileList.value = editForm.value.pictures.map((pic, index) => ({
-        name: `商品图片${index + 1}`,
-        url: pic.url
-      }));
+
+      // 如果后端返回了图片数据，处理图片
+      if (Array.isArray(data.goods_pictures)) {
+        // 将base64图片数据转换为文件列表
+        fileList.value = data.goods_pictures.map((pic, index) => ({
+          name: `商品图片${index + 1}`,
+          url: URL.createObjectURL(base64ToBlob(pic))
+        }));
+        
+        // 保存图片数据到表单
+        editForm.value.pictures = data.goods_pictures;
+      }
+
+      ElMessage.success('商品信息加载成功');
+    } else {
+      throw new Error(data.message || '获取商品信息失败');
+    }
+  } catch (error) {
+    console.error('Error initializing edit form:', error);
+        ElMessage.error('加载商品信息失败，请重试');
+      }
     }
 
     // 处理图片上传
     function handleUploadSuccess(response, file) {
       if (response.success) {
+        console.log("response.url:", response.url);
         editForm.value.pictures.push(response.url);
         ElMessage.success('图片上传成功');
       } else {
@@ -1099,6 +1139,7 @@ export default {
             ...editForm.value
           })
         });
+        console.log("editForm.value:", editForm.value);
 
         if (!response.ok) throw new Error('更新失败');
 
