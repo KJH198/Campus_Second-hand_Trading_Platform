@@ -215,7 +215,16 @@
         </el-form-item>
 
         <el-form-item label="商品价格" prop="goods_price">
-          <el-input v-model="publishForm.goods_price" type="number" />
+          <el-input-number 
+            v-model="publishForm.goods_price" 
+            :min="0" 
+            :precision="2" 
+            :step="0.1" 
+            
+            
+          >
+            <template #suffix>元</template> 
+          </el-input-number>
         </el-form-item>
 
         <el-form-item label="商品描述" prop="goods_description">
@@ -233,18 +242,30 @@
           <el-upload
             class="goods-uploader"
             :action="uploadUrl"
-            :headers="uploadHeaders"
-            :data="uploadData"
             :show-file-list="true"
             :on-success="handleUploadSuccess"
             :on-error="handleUploadError"
+            :on-remove="handleRemove"
             :before-upload="beforeUpload"
             :file-list="fileList"
             multiple
             list-type="picture-card"
+            :on-preview="handlePreview"
           >
             <el-icon><Plus /></el-icon>
           </el-upload>
+          
+          <!-- 添加预览大图的组件 -->
+          <el-image
+            v-if="previewUrl"
+            style="display: none"
+            :src="previewUrl"
+            :preview-src-list="[previewUrl]"
+            :initial-index="0"
+            fit="contain"
+            hide-on-click-modal
+            ref="imagePreview"
+          />
         </el-form-item>
       </el-form>
 
@@ -577,15 +598,18 @@
       const showPublishDialog = ref(false);
       const publishFormRef = ref(null);
       const fileList = ref([]);
+      const previewUrl = ref('');
+      const imagePreview = ref(null);
 
       const publishForm = ref({
         goods_name: '',
         category_name: '',
-        goods_price: '',
+        goods_price: 0,
         goods_description: '',
-        goods_state: '在售',
+        goods_state: '',
         goods_pictures: [],
-        pictures_type: []
+        pictures_type: [],
+        deleted_pictures: []  // 用于记录被删除的图片
       });
 
       const publishRules = {
@@ -639,11 +663,17 @@
         fileList.value = [];
         publishForm.value.goods_pictures = [];
         publishForm.value.pictures_type = [];
+        publishForm.value.deleted_pictures = [];
         showPublishDialog.value = false;
       }
 
       function handleUploadSuccess(response, file) {
         if (response.success) {
+          fileList.value.push({
+            name: file.name,
+            url: URL.createObjectURL(file.raw),
+            uid: file.uid
+          });
           publishForm.value.goods_pictures.push(response.url);
           publishForm.value.pictures_type.push(file.name);
           ElMessage.success('图片上传成功');
@@ -655,6 +685,23 @@
       function handleUploadError(error) {
         console.error('Upload error:', error);
         ElMessage.error('图片上传失败，请重试');
+      }
+
+      function handleRemove(file) {
+        const index = fileList.value.findIndex(f => f.uid === file.uid);
+        if (index !== -1) {
+          publishForm.value.deleted_pictures.push(publishForm.value.pictures_type[index]);
+          publishForm.value.goods_pictures.splice(index, 1);
+          publishForm.value.pictures_type.splice(index, 1);
+          fileList.value.splice(index, 1);
+        }
+      }
+
+      function handlePreview(file) {
+        previewUrl.value = file.url;
+        nextTick(() => {
+          imagePreview.value.clickHandler();
+        });
       }
 
       function beforeUpload(file) {
@@ -777,6 +824,8 @@
         handleClosePublish,
         handleUploadSuccess,
         handleUploadError,
+        handleRemove,
+        handlePreview,
         beforeUpload,
         submitPublish
 
