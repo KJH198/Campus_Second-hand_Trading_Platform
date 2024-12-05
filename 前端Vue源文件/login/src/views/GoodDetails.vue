@@ -346,8 +346,10 @@
             v-model="editForm.goods_price" 
             :precision="2" 
             :step="0.1" 
-            :min="0"
-          />
+            :min="0" 
+          >
+            <template #suffix>元</template>
+          </el-input-number>
         </el-form-item>
 
         <el-form-item label="商品描述" prop="goods_description">
@@ -374,6 +376,7 @@
             :on-success="handleUploadSuccess"
             :on-error="handleUploadError"
             :on-remove="handleRemove"
+            :on-preview="handlePreview" 
             :before-upload="beforeUpload"
             :file-list="fileList"
             multiple
@@ -382,6 +385,13 @@
             <el-icon><Plus /></el-icon>
           </el-upload>
         </el-form-item>
+        <!-- 添加图片预览组件 -->
+      <el-image-viewer
+        v-if="showViewer"
+        :url-list="fileList.map(file => file.url)"
+        :initial-index="previewIndex"
+        @close="showViewer = false"
+      />
       </el-form>
 
       <template #footer>
@@ -468,7 +478,9 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { ElImageViewer } from 'element-plus';
+
 import { useRoute } from 'vue-router';
 import defaultAvatar from '@/assets/tubiao.png';
 import lanqiuImage from '@/assets/lanqiu.png';
@@ -508,7 +520,8 @@ export default {
     Edit, 
     Plus,
     ShoppingCart,
-    Warning
+    Warning,
+    ElImageViewer
   },
   setup() {
     const route = useRoute();
@@ -1113,14 +1126,18 @@ export default {
     const fileList = ref([]);
 
     function handleRemove(file) {
+      console.log("file:", file);
+      console.log("editForm.goods_pictures:", editForm.value.goods_pictures);
       // 将被删除的图片记录到deleted_pictures中
-      const index = fileList.value.indexOf(file);
+      const index = fileList.value.findIndex(f => f.uid === file.uid);
+      console.log("index:", index);
       if (index !== -1) {
         editForm.value.deleted_pictures.push(editForm.value.pictures_type[index]);
         fileList.value.splice(index, 1);
         editForm.value.goods_pictures.splice(index, 1);
         editForm.value.pictures_type.splice(index, 1);
       }
+      console.log("editForm.goods_pictures:", editForm.value.goods_pictures);
     }
     
     const editForm = ref({
@@ -1228,12 +1245,22 @@ export default {
 
     // 处理图片上传
     function handleUploadSuccess(response, file) {
+      console.log("Upload success - file:", file);
+      console.log("Upload success - response:", response);
       if (response.success) {
-        console.log("response.url:", response.url);
+        fileList.value.push({
+          name: file.name,
+          url: URL.createObjectURL(file.raw),
+          uid: file.uid
+        });
+        //console.log("response.url:", response.url);
         editForm.value.goods_pictures.push(response.url);
         // 保存图片文件名到表单
-        console.log("file.name:", file.name);
+        //console.log("file.name:", file.name);
         editForm.value.pictures_type.push(file.name);
+        console.log("fileList.value:", fileList.value);
+        console.log("After upload - goods_pictures:", editForm.value.goods_pictures);
+        console.log("After upload - pictures_type:", editForm.value.pictures_type);
         ElMessage.success('图片上传成功');
       } else {
         ElMessage.error(response.message || '上传失败');
@@ -1519,6 +1546,18 @@ export default {
       document.removeEventListener('click', closeDropdown);
     });
 
+    const previewUrl = ref('');
+    const showViewer = ref(false);
+    const imagePreview = ref(null);
+    const previewIndex = ref(0);
+
+    // 修改 el-upload 的 onPreview 处理函数
+    function handlePreview(file) {
+      //previewUrl.value = file.url;
+      previewIndex.value = fileList.value.findIndex(f => f.uid === file.uid);
+      showViewer.value = true;
+    }
+
     return {
       userAvatar,
       dropdownVisible,
@@ -1585,6 +1624,11 @@ export default {
       handleReport,
       handleCloseReport,
       submitReport,
+      previewUrl,
+      imagePreview,
+      handlePreview,
+      showViewer,
+      previewIndex
     };
   }
 };

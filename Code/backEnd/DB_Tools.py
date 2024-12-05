@@ -216,10 +216,10 @@ def reDefineGoods(info):  # goods_id,seller_id,pictures,goods_name,category_name
         size = len(pictures_type)
         for i in range(size):
             addSinglePicture(goods_id,bytes(base64.b64decode(pictures[i])),pictures_type[i])
-    if (info.get("delete_pictures")):
-        delete_pictures = info.get("delete_pictures")
-        for delete_picture in delete_pictures:
-            deleteSinglePicture(delete_picture)
+    #if (info.get("delete_pictures")):
+    #    delete_pictures = info.get("delete_pictures")
+    #    for delete_picture in delete_pictures:
+    #        deleteSinglePicture(delete_picture)
     db.session.commit()
     print(info)
     return True
