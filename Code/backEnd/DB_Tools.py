@@ -5,8 +5,7 @@ import base64
 import random
 
 # 自己修改为本地存储图片文件夹的绝对路径 + \\
-picturePath = 'E:\\Junior_Autumn\\Database\\Final_Project\\Campus_Second-hand_Trading_Platform\\Code\\backEnd\\uploads\\'
-urlCnt = 0
+picturePath = 'C:\\Users\\kjh15\\Desktop\\Project\\Campus_Second-hand_Trading_Platform\\Code\\picture\\'
 Default_url = 'default.jpg'
 
 # 添加管理员
@@ -54,12 +53,14 @@ def reDefineUser(info): # user_id, user_name, password, picture, pictureName, ot
 
 # 生成图片URL
 def urlGenerator(binaryPicture,pictureName):
-    global urlCnt
     global picturePath
+    with open (picturePath[:-8] + 'urlCnt.txt','r') as file:
+        urlCnt = int(file.read())
     local_picture_name = str(urlCnt) + getPicturetype(pictureName)
-    with open(picturePath+local_picture_name, 'wb') as file:     # 二进制写入
+    with open(picturePath + local_picture_name, 'wb') as file:     # 二进制写入
         file.write(binaryPicture)
-    urlCnt += 1
+    with open (picturePath[:-8] + 'urlCnt.txt','w') as file:
+        file.write(str(urlCnt + 1))
     return local_picture_name
 
 # 删除用户图片
@@ -174,29 +175,32 @@ def deleteGoods(goods_id):
     db.session.commit()
     return True
 
-# 为商品添加单个图片
-def addSinglePicture(goods_id,picture,pictureName):
-    url = urlGenerator(picture,pictureName)
-    newPicture = Picture(
-        picture_url = url, 
-        goods_id = goods_id
-    )
-    db.session.add(newPicture)
+# 为商品添加图片
+def addPictures(goods_id,pictures,pictures_type):
+    size = len(pictures_type)
+    for i in range(size):
+        url = urlGenerator(bytes(base64.b64decode(pictures[i])),pictures_type[i])
+        newPicture = Picture(
+            picture_url = url, 
+            goods_id = goods_id
+        )
+        db.session.add(newPicture)
     db.session.commit()
-    return True
-
-# 删除单个商品图片
-def deleteSinglePicture(url):
-    picture = Picture.query.filter_by(picture_url = url).first()
-    db.session.delete(picture)
+    return True    
+    
+    
+# 删除商品图片
+def deletePictures(urls):
+    for url in urls:
+        picture = Picture.query.filter_by(picture_url = url).first()
+        db.session.delete(picture)
+        full_url = picturePath + url
+        os.remove(full_url)
     db.session.commit()
-    full_url = picturePath + url
-    os.remove(full_url)
     return True
     
 # 修改商品信息
 def reDefineGoods(info):  # goods_id,seller_id,pictures,goods_name,category_name,goods_price,goods_description
-    print(info)
     if (info.get("goods_id")): goods = Goods.query.filter_by(goods_id = info.get("goods_id")).first()
     else: return False
     if (info.get("seller_id")): goods.seller_id = info.get("seller_id")
@@ -208,30 +212,22 @@ def reDefineGoods(info):  # goods_id,seller_id,pictures,goods_name,category_name
         goods_id = info.get("goods_id")
         # 删除该goods_id的原有图片
         goods_pictures_url = Picture.query.filter_by(goods_id = goods_id).all()
-        for goods_picture_url in goods_pictures_url:
-            deleteSinglePicture(goods_picture_url.picture_url)
-
-        pictures = info.get("goods_pictures")
-        pictures_type = info.get("pictures_type")
-        size = len(pictures_type)
-        for i in range(size):
-            addSinglePicture(goods_id,bytes(base64.b64decode(pictures[i])),pictures_type[i])
-    #if (info.get("delete_pictures")):
-    #    delete_pictures = info.get("delete_pictures")
-    #    for delete_picture in delete_pictures:
-    #        deleteSinglePicture(delete_picture)
+        deletePictures([goods_picture_url.picture_url for goods_picture_url in goods_pictures_url])
+        # 添加该goods_id的新增照片
+        addPictures(goods_id,info.get("goods_pictures"),info.get("pictures_type"))
     db.session.commit()
-    print(info)
     return True
 
 # 随机获取在售商品预览页
 def getUnselledGoods(num):
     goods = Goods.query.filter_by(goods_state = "在售").all()
-    size = len(goods)
     data = []
-    num = min(size,num)
-    while num:
-        randGoods = goods[random.randint(0, size - 1)]
+    if (len(goods) == 0): return data
+    goodsIdSet = set()
+    for i in range(num):
+        goodsIdSet.add(random.randint(0, len(goods) - 1))
+    for i in goodsIdSet:
+        randGoods = goods[i]
         goods_id = randGoods.goods_id
         goods_name = randGoods.goods_name
         goods_price = randGoods.goods_price
@@ -242,11 +238,9 @@ def getUnselledGoods(num):
             picture_byte_stream = file.read()
         picture = base64.b64encode(picture_byte_stream).decode("ascii")
         data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":picture})
-        num -= 1
     return data
 
 def transb264(pictureFile):
-    
     picture_byte_stream = pictureFile.read()
     return base64.b64encode(picture_byte_stream).decode("ascii")
     
@@ -567,6 +561,38 @@ def sendAccusation(info): # content, accuser_id, accused_user_id, accused_goods_
     db.session.add(newAccusation)
     db.session.commit()
     return True
+
+def getAccusations():
+    accusations = Accusation.query.all()
+    data = []
+    for accusation in accusations:
+        accusation_id = accusation.accusation_id
+        accuser_id = accusation.accuser_id
+        accused_user_id = accusation.accused_user_id
+        accused_goods_id = accusation.accused_goods_id
+        order_comment_id = accusation.order_comment_id
+        secondary_order_comment_id = accusation.secondary_order_comment_id
+        goods_consultation_id = accusation.goods_consultation_id
+        goods_consultation_reply_id = accusation.goods_consultation_reply_id
+        content = accusation.content
+        info = {}
+        info['accusation_id'] = accusation_id
+        info['accuser_id'] = accuser_id
+        info['content'] = content
+        if (accused_user_id != None): info['accused_user_id'] = accused_user_id
+        elif (accused_goods_id != None): info['accused_user_id'] = accused_goods_id
+        elif (order_comment_id != None): info['accused_user_id'] = order_comment_id
+        elif (secondary_order_comment_id != None): info['accused_user_id'] = secondary_order_comment_id
+        elif (goods_consultation_id != None): info['accused_user_id'] = goods_consultation_id
+        elif (goods_consultation_reply_id != None): info['accused_user_id'] = goods_consultation_reply_id
+        data.append(info)
+    return data
+    
+    
+def deleteAccusation(accusation_id):
+    accusation = Accusation.query.filter_by(accusation_id = accusation_id).first()
+    db.session.delete(accusation)
+    db.session.commit()
 ################################################### 地址管理 ##############################################################
 # 添加地址
 def addAddress(user_id,receiver_name,phone_number,address):
