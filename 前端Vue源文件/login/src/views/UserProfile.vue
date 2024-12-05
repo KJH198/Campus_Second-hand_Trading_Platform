@@ -204,13 +204,13 @@
           <el-input v-model="publishForm.goods_name" />
         </el-form-item>
 
-        <el-form-item label="商品类别" prop="category">
-          <el-select v-model="publishForm.category" placeholder="请选择商品类别">
-            <el-option label="篮球" value="篮球" />
-            <el-option label="学习" value="学习" />
-            <el-option label="数码" value="数码" />
-            <el-option label="衣物" value="衣物" />
-            <el-option label="其他" value="其他" />
+        <el-form-item label="商品类别" prop="category_name">
+          <el-select v-model="publishForm.category_name" placeholder="请选择商品类别">
+            <el-option label="体育运动" value="sport" />
+            <el-option label="学习用品" value="study" />
+            <el-option label="电子数码" value="digital" />
+            <el-option label="衣物饰品" value="cloth" />
+            <el-option label="其他类别" value="else" />
           </el-select>
         </el-form-item>
 
@@ -218,18 +218,18 @@
           <el-input v-model="publishForm.goods_price" type="number" />
         </el-form-item>
 
-        <el-form-item label="商品描述" prop="description">
-          <el-input v-model="publishForm.description" type="textarea" />
+        <el-form-item label="商品描述" prop="goods_description">
+          <el-input v-model="publishForm.goods_description" type="textarea" />
         </el-form-item>
 
-        <el-form-item label="商品状态" prop="status">
-          <el-select v-model="publishForm.status" placeholder="请选择商品状态">
+        <el-form-item label="商品状态" prop="goods_state">
+          <el-select v-model="publishForm.goods_state" placeholder="请选择商品状态">
             <el-option label="在售" value="在售" />
             <el-option label="已售出" value="已售出" />
           </el-select>
         </el-form-item>
 
-        <el-form-item label="商品图片">
+        <el-form-item label="商品图片" prop="goods_pictures">
           <el-upload
             class="goods-uploader"
             :action="uploadUrl"
@@ -580,11 +580,12 @@
 
       const publishForm = ref({
         goods_name: '',
-        category: '',
+        category_name: '',
         goods_price: '',
-        description: '',
-        status: '在售',
-        pictures: []
+        goods_description: '',
+        goods_state: '在售',
+        goods_pictures: [],
+        pictures_type: []
       });
 
       const publishRules = {
@@ -592,22 +593,35 @@
           { required: true, message: '请输入商品名称', trigger: 'blur' },
           { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
         ],
-        category: [
+        category_name: [
           { required: true, message: '请选择商品类别', trigger: 'change' }
         ],
         goods_price: [
           { required: true, message: '请输入商品价格', trigger: 'blur' }
         ],
-        description: [
+        goods_description: [
           { required: true, message: '请输入商品描述', trigger: 'blur' }
         ],
-        status: [
+        goods_state: [
           { required: true, message: '请选择商品状态', trigger: 'change' }
-        ]
+        ],
+        goods_pictures: [
+        { 
+        required: true, 
+        validator: (rule, value, callback) => {
+          if (!publishForm.value.goods_pictures || publishForm.value.goods_pictures.length === 0) {
+            callback(new Error('请至少上传一张商品图片'));
+          } else {
+            callback();
+          }
+        },
+        trigger: 'change'
+        }
+      ]
       };
 
       // 上传相关配置
-      const uploadUrl = 'http://localhost:8080/goods_detail';
+      const uploadUrl = '/goods_picture_show';
       const uploadHeaders = {
         'type': 'upload_picture'
       };
@@ -623,13 +637,15 @@
       function handleClosePublish() {
         publishFormRef.value?.resetFields();
         fileList.value = [];
-        publishForm.value.pictures = [];
+        publishForm.value.goods_pictures = [];
+        publishForm.value.pictures_type = [];
         showPublishDialog.value = false;
       }
 
       function handleUploadSuccess(response, file) {
         if (response.success) {
-          publishForm.value.pictures.push(response.url);
+          publishForm.value.goods_pictures.push(response.url);
+          publishForm.value.pictures_type.push(file.name);
           ElMessage.success('图片上传成功');
         } else {
           ElMessage.error(response.message || '上传失败');
@@ -661,16 +677,45 @@
 
         try {
           await publishFormRef.value.validate();
+
+          // 第一步：向后端申请一个新的 goods_id
+          const idResponse = await fetch("/goods_detail", {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'type': 'request_goods_id'
+            },
+            body: JSON.stringify({
+              user_id: route.query.user_id
+            })
+          });
+
+          if (!idResponse.ok) throw new Error('申请商品ID失败');
+
+          const idData = await idResponse.json();
+          if (!idData.success) {
+            throw new Error(idData.message || '申请商品ID失败');
+          }
+
+          const newGoodsId = idData.goods_id;
           
           const response = await fetch("/goods_detail", {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'type': 'create_goods'
+              'type': 'update_goods'
             },
             body: JSON.stringify({
-              user_id: route.query.user_id,
-              ...publishForm.value
+              info: {
+              goods_id: newGoodsId,
+              goods_name: publishForm.value.goods_name,
+              category_name: publishForm.value.category_name,
+              goods_price: publishForm.value.goods_price,
+              goods_description: publishForm.value.goods_description,
+              goods_state: publishForm.value.goods_state,
+              goods_pictures: publishForm.value.goods_pictures,
+              pictures_type: publishForm.value.pictures_type
+            }
             })
           });
 
@@ -681,8 +726,8 @@
             ElMessage.success('商品发布成功');
             handleClosePublish();
             // 刷新商品列表
-            if (typeof fetchMyGoods === 'function') {
-              await fetchMyGoods();
+            if (typeof fetchUserGoods === 'function') {
+              await fetchUserGoods();
             }
           } else {
             ElMessage.error(data.message || '发布失败');
@@ -734,6 +779,7 @@
         handleUploadError,
         beforeUpload,
         submitPublish
+
       };
     }
   };

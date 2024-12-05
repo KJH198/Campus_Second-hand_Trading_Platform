@@ -189,7 +189,7 @@ def deleteSinglePicture(url):
     
 # 修改商品信息
 def reDefineGoods(info):  # goods_id,seller_id,pictures,goods_name,category_name,goods_price,goods_description
-    #print(info)
+    print(info)
     if (info.get("goods_id")): goods = Goods.query.filter_by(goods_id = info.get("goods_id")).first()
     else: return False
     if (info.get("seller_id")): goods.seller_id = info.get("seller_id")

@@ -308,7 +308,7 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="商品图片">
+        <el-form-item label="商品图片" prop="goods_pictures">
           <el-upload
             class="goods-uploader"
             :action="uploadUrl"
@@ -1047,7 +1047,20 @@ export default {
       ],
       goods_state: [
         { required: true, message: '请选择商品状态', trigger: 'change' }
-      ]
+      ],
+      goods_pictures: [
+      { 
+      required: true, 
+      validator: (rule, value, callback) => {
+        if (!editForm.value.goods_pictures || editForm.value.goods_pictures.length === 0) {
+          callback(new Error('请至少上传一张商品图片'));
+        } else {
+          callback();
+        }
+      },
+      trigger: 'change'
+    }
+  ]
     };
 
     // 初始化编辑表单

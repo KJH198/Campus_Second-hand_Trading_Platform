@@ -62,6 +62,9 @@ def goods_detail():
         return jsonify({'success':dbTools.like(data.get("like"),data.get("level"),data.get("cancel"),data.get("id"))})
     elif type == 'update_goods':
         return jsonify({'success':dbTools.reDefineGoods(data.get("info"))})
+    elif type == 'request_goods_id':
+        return jsonify({'success':True, 'goods_id':dbTools.addGoods(data.get("user_id"))})
+    
 
 @app.route('/user_profile', methods=['POST'])
 def user_profile():
