@@ -167,6 +167,13 @@ def addGoods(seller_id):
     db.session.commit()
     return newGoods.goods_id
 
+# 强制删除商品
+def deleteGoods(goods_id):
+    goods = Goods.query.filter_by(goods_id = goods_id).first()
+    db.session.delete(goods)
+    db.session.commit()
+    return True
+
 # 为商品添加单个图片
 def addSinglePicture(goods_id,picture,pictureName):
     url = urlGenerator(picture,pictureName)
@@ -244,7 +251,7 @@ def transb264(pictureFile):
     return base64.b64encode(picture_byte_stream).decode("ascii")
     
 # 获取商品详情页
-def getGoodsInfo(goods_id):
+def getGoodsInfo(goods_id,user_id):
     goods = Goods.query.filter_by(goods_id = goods_id).first()
     goods_name = goods.goods_name
     goods_price = goods.goods_price
@@ -275,7 +282,7 @@ def getGoodsInfo(goods_id):
     heat = goods.heat
     return {"goods_name":goods_name,"goods_price":goods_price,"goods_pictures":pictures_byte_stream_list,"seller_name":seller_name,
             "seller_picture":seller_picture,"begin_time":begin_time, "category_name":category_name,
-            "goods_description":goods_description,"goods_state":goods_state,"heat":heat, "pictures_type":pictures_type}
+            "goods_description":goods_description,"goods_state":goods_state,"heat":heat,"collected":checkcollection(goods_id,user_id), "pictures_type":pictures_type}
     
 # 按关键字搜索商品
 def searchGoods(info):
@@ -500,4 +507,94 @@ def deleteAnnouncement(announcement_id):
     db.session.delete(announcement)
     db.session.commit()
     return True
-    
+
+##################################################### 订单管理 ########################################################
+def buyGoods(goods_id,buyer_id):
+    newOrder = Order(
+        goods_id = goods_id,
+        buyer_id = buyer_id,
+        order_state = '已下单',
+        deal_time = datetime.now()
+    )
+    db.session.add(newOrder)
+    db.session.commit()
+    return True
+
+def dealDown(goods_id,getIt):
+    order = Order.query.filter_by(goods_id = goods_id).first()
+    if getIt:
+        goods = Goods.query.filter_by(goods_id = goods_id).first()
+        goods.goods_state = '已售'
+    db.session.delete(order)
+    db.session.commit()
+    return True
+##################################################### 收藏管理 #######################################################
+def addcollection(goods_id,user_id):
+    newCollection = Collection(
+        user_id = user_id,
+        goods_id = goods_id
+    )
+    db.session.add(newCollection)
+    db.session.commit()
+    return True
+
+def cancelCollection(goods_id,user_id):
+    collection = Collection.query.filter_by(goods_id = goods_id,user_id = user_id).first()
+    db.session.delete(collection)
+    db.session.commit()
+    return True
+
+def checkcollection(goods_id,user_id):
+    collection = Collection.query.filter_by(goods_id = goods_id,user_id = user_id).first()
+    if collection == None:
+        return False
+    return True
+################################################### 举报管理 ##############################################################
+# 发起举报
+def sendAccusation(info): # content, accuser_id, accused_user_id, accused_goods_id, order_comment_id, secondary_order_comment_id, goods_consultation_id, goods_consultation_reply_id
+    content = info.get('content')
+    accuser_id = info.get('accuser_id')
+    newAccusation = Accusation(
+        accuser_id = accuser_id,
+        accused_user_id = info.get('accused_user_id'),
+        accused_goods_id = info.get('accused_goods_id'),
+        order_comment_id = info.get('order_comment_id'),
+        secondary_order_comment_id = info.get('secondary_order_comment_id'),
+        goods_consultation_id = info.get('goods_comment_id'),
+        goods_consultation_reply_id = info.get('second_goods_comment_id'),
+        content = content
+    )
+    db.session.add(newAccusation)
+    db.session.commit()
+    return True
+################################################### 地址管理 ##############################################################
+# 添加地址
+def addAddress(user_id,receiver_name,phone_number,address):
+    newAddress = Address(
+        user_id = user_id,
+        receiver_name = receiver_name,
+        phone_number = phone_number,
+        address = address
+    )
+    db.session.add(newAddress)
+    db.session.commit()
+    return True
+
+# 得到用户全部地址
+def getAddress(user_id):
+    address = Address.query.filter_by(user_id = user_id).all()
+    data = []
+    for item in address:
+        address_id = item.address_id
+        receiver_name = item.receiver_name
+        phone_number = item.phone_number
+        content = item.address
+        data.append({"address_id":address_id,"receiver_name":receiver_name,"phone_number":phone_number,"address":content})
+    return data
+
+# 删除地址
+def deleteAddress(address_id):
+    address = Address.query.filter_by(address_id = address_id).first()
+    db.session.delete(address)
+    db.session.commit()
+    return True

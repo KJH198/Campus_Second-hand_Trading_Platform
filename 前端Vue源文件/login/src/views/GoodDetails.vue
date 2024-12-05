@@ -88,6 +88,33 @@
             </el-button>
           </div>
           <div class="product-price">¥{{ goodsPrice }}</div>
+          
+          <!-- 添加一个按钮容器 -->
+          <div class="action-buttons-container">
+            <!-- 收藏按钮 -->
+            <el-button
+              v-if="!isOwner"
+              :type="isCollected ? 'warning' : 'default'"
+              class="collect-button"
+              @click="handleCollect"
+            >
+              <el-icon><Star :class="{ 'collected': isCollected }" /></el-icon>
+              {{ isCollected ? '已收藏' : '收藏' }}
+            </el-button>
+
+            <!-- 购买按钮 -->
+            <el-button
+              v-if="!isOwner"
+              type="primary"
+              class="purchase-button"
+              :disabled="isProcessing"
+              @click="showAddressSelection"
+            >
+              <el-icon><ShoppingCart /></el-icon>
+              {{ isProcessing ? '处理中...' : '现在下单' }}
+            </el-button>
+          </div>
+
           <div class="product-meta">
             <div class="meta-item heat">
               <el-icon><Star /></el-icon>
@@ -122,7 +149,18 @@
 
       <!-- 商品描述 -->
       <div class="product-description">
-        <h2>商品描述</h2>
+        <div class="description-header">
+          <h2>商品描述</h2>
+          <el-button 
+            type="danger" 
+            size="small" 
+            class="report-goods-btn"
+            @click="handleReport('goods')"
+          >
+            <el-icon><Warning /></el-icon>
+            举报商品
+          </el-button>
+        </div>
         <p>{{ goodsDescription }}</p>
       </div>
 
@@ -148,10 +186,20 @@
           >
             <!-- 主评论 -->
             <div class="comment-main">
-              <div class="comment-user">
-                <img :src="comment.deliver_picture" :alt="comment.deliver_name" />
-                <span class="user-name">{{ comment.deliver_name }}</span>
-                <span class="comment-time">{{ comment.comment_time }}</span>
+              <div class="comment-header">
+                <div class="comment-user">
+                  <img :src="comment.deliver_picture" :alt="comment.deliver_name" />
+                  <span class="user-name">{{ comment.deliver_name }}</span>
+                  <span class="comment-time">{{ comment.comment_time }}</span>
+                </div>
+                <el-button 
+                  type="text" 
+                  class="report-comment-btn"
+                  @click="handleReport('comment', comment.goods_comment_id)"
+                >
+                  <el-icon><Warning /></el-icon>
+                  举报
+                </el-button>
               </div>
               <div class="comment-content">{{ comment.comment }}</div>
               <div class="comment-actions">
@@ -207,10 +255,20 @@
                    :key="reply.comment_time" 
                    class="reply-item"
               >
-                <div class="comment-user">
-                  <img :src="reply.deliver_picture" :alt="reply.deliver_name" />
-                  <span class="user-name">{{ reply.deliver_name }}</span>
-                  <span class="comment-time">{{ reply.comment_time }}</span>
+                <div class="reply-header">
+                  <div class="comment-user">
+                    <img :src="reply.deliver_picture" :alt="reply.deliver_name" />
+                    <span class="user-name">{{ reply.deliver_name }}</span>
+                    <span class="comment-time">{{ reply.comment_time }}</span>
+                  </div>
+                  <el-button 
+                    type="text" 
+                    class="report-reply-btn"
+                    @click="handleReport('reply', comment.goods_comment_id, reply.second_goods_comment_id)"
+                  >
+                    <el-icon><Warning /></el-icon>
+                    举报
+                  </el-button>
                 </div>
                 <div class="comment-content">{{ reply.comment }}</div>
                 <div class="comment-actions">
@@ -335,6 +393,77 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 添加举报对话框 -->
+    <el-dialog
+      v-model="showReportDialog"
+      title="举报"
+      width="30%"
+      :before-close="handleCloseReport"
+    >
+      <el-form :model="reportForm" ref="reportFormRef">
+        <el-form-item 
+          label="举报理由" 
+          prop="content"
+          :rules="[{ required: true, message: '请填写举报理由', trigger: 'blur' }]"
+        >
+          <el-input
+            v-model="reportForm.content"
+            type="textarea"
+            rows="4"
+            placeholder="请详细描述举报原因..."
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="handleCloseReport">取消</el-button>
+          <el-button type="danger" @click="submitReport">提交举报</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 添加地址选择对话框 -->
+    <el-dialog
+      v-model="showAddressDialog"
+      title="选择收货地址"
+      width="50%"
+    >
+      <el-table
+        :data="addressList"
+        style="width: 100%"
+        highlight-current-row
+        @current-change="handleAddressSelect"
+      >
+        <el-table-column
+          prop="receiver_name"
+          label="收货人"
+          width="120"
+        />
+        <el-table-column
+          prop="phone_number"
+          label="联系电话"
+          width="150"
+        />
+        <el-table-column
+          prop="address"
+          label="收货地址"
+        />
+      </el-table>
+      
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showAddressDialog = false">取消</el-button>
+          <el-button 
+            type="primary" 
+            @click="confirmOrder"
+            :disabled="!selectedAddress"
+          >
+            确认下单
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -354,9 +483,11 @@ import {
   Star, 
   Calendar, 
   Phone, 
-  Position,     // 使用 Position 图标来模拟拇指
+  Position,     // 使用 Position 图标来模拇指
   Edit, 
-  Plus
+  Plus,
+  ShoppingCart,
+  Warning
 } from '@element-plus/icons-vue';
 import { ElIcon } from 'element-plus';
 import { ElDialog } from 'element-plus';
@@ -375,7 +506,9 @@ export default {
     ElDialog,
     Position,    // 注册 Position 组件
     Edit, 
-    Plus
+    Plus,
+    ShoppingCart,
+    Warning
   },
   setup() {
     const route = useRoute();
@@ -435,7 +568,7 @@ export default {
     }
 
     // 获取公告
-    async function fetchAnnouncements() {
+    async function fetchAnnouncements(){
       try {
         const response = await fetch("/goods_detail", {
           method: "GET",
@@ -554,7 +687,7 @@ export default {
       }
     }
 
-    // 提交评论
+    // 提交评
     async function submitComment() {
       if (!newComment.value.trim()) {
         ElMessage.warning('评论内容不能为空');
@@ -596,7 +729,7 @@ export default {
 
     function contactSeller() {
       // 实现联系卖家的逻辑
-      console.log('系卖家');
+      console.log('联系卖家');
     }
 
     async function toggleFavorite() {
@@ -622,7 +755,6 @@ export default {
 
     // 在 setup() 函数中添加获取商品情函数
     async function fetchGoodsDetail() {
-      // console.log("开始获取商品详情");
       try {
         console.log("发送请求，商品ID:", route.params.productId);
         const response = await fetch("/goods_detail", {
@@ -632,17 +764,17 @@ export default {
             'type': 'detail'
           },
           body: JSON.stringify({
-            goods_id: route.params.productId
+            goods_id: route.params.productId,
+            user_id: route.query.current_user_id  // 添加用户ID
           })
         });
 
-        console.log("收到响应:", response.status);
         if (!response.ok) {
           throw new Error('Failed to fetch goods detail');
         }
 
         const data = await response.json();
-        console.log("获取到商品详情数：", data);
+        console.log("获取到商品详情数据：", data);
 
         // 处理卖家头像
         if (data.seller_picture) {
@@ -663,59 +795,30 @@ export default {
         sellerName.value = data.seller_name;
         heat.value = data.heat;
         beginTime.value = data.begin_time;
+        
+        // 更新收藏状态
+        isCollected.value = data.collected;
 
       } catch (error) {
-        console.log("进入误处理分支");
         console.error('Error fetching goods detail:', error);
-        console.log("开始设置默认数");
         
-        // 确保设置默认图片数组
-        goodsPictures.value = [
-          lanqiuImage,
-          xuexiImage,
-          shumaImage,
-          yiwuImage,
-          qitaImage
-        ];
-        console.log("默认图片数组已设置，长度:", goodsPictures.value.length);
-        console.log("默认图片路径:", goodsPictures.value);
-        
-        // 设置其他默认数据
+        // 设置默认数据
+        goodsPictures.value = [lanqiuImage, xuexiImage, shumaImage, yiwuImage, qitaImage];
         goodsName.value = route.query.name || '测试商品';
         goodsPrice.value = route.query.price || '99.99';
-        goodsDescription.value = '这一个是测试商品描述，用于调试多图片示效果。';
+        goodsDescription.value = '这是一个测试商品描述，用于调试多图片展示效果。';
         sellerName.value = '测试卖家';
         sellerPicture.value = defaultAvatar;
-        
-        // 生成机热度（50-1000之间）
         heat.value = Math.floor(Math.random() * 951) + 50;
-        console.log("默认热度值:", heat.value);
         
         // 生成最近7天内的随机日期
         const today = new Date();
         const randomDays = Math.floor(Math.random() * 7);
         today.setDate(today.getDate() - randomDays);
         beginTime.value = today.toISOString().split('T')[0];
-        console.log("默认上架时间:", beginTime.value);
-
-        // 设置默认评论
-        comments.value = [
-          {
-            id: 1,
-            userAvatar: defaultAvatar,
-            userName: '测试用户1',
-            time: '2024-03-20 10:00',
-            content: '这是一条测试评论'
-          },
-          {
-            id: 2,
-            userAvatar: defaultAvatar,
-            userName: '测试用户2',
-            time: '2024-03-20 11:00',
-            content: '这是另一条测试评论'
-          }
-        ];
-        console.log("默认数据设置完成");
+        
+        // 默认未收藏
+        isCollected.value = false;
       }
     }
 
@@ -884,7 +987,7 @@ export default {
             body: JSON.stringify({
               like: false,
               level: level,
-              id: rawId,  // 使用原始ID
+              id: rawId,  // 用原始ID
               cancel: currentAction === 'dislike'
             })
           });
@@ -1209,6 +1312,198 @@ export default {
       showEditDialog.value = false;
     }
 
+    // 添加订单处理相关的响应式变量
+    const isProcessing = ref(false);
+    
+    // 添加地址相关的响应式变量
+    const showAddressDialog = ref(false);
+    const addressList = ref([]);
+    const selectedAddress = ref(null);
+    
+    // 显示地址选择对话框并获取地址列表
+    async function showAddressSelection() {
+      try {
+        const response = await fetch("/goods_detail", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'getaddress'
+          },
+          body: JSON.stringify({
+            buyer_id: route.query.current_user_id
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch addresses');
+        }
+
+        const data = await response.json();
+        addressList.value = data;
+        showAddressDialog.value = true;
+      } catch (error) {
+        console.error('Error fetching addresses:', error);
+        ElMessage.error('获取地址列表失败，请重试');
+      }
+    }
+
+    // 处理地址选
+    function handleAddressSelect(address) {
+      selectedAddress.value = address;
+    }
+
+    // 修改购买处理函数
+    async function confirmOrder() {
+      if (!selectedAddress.value) {
+        ElMessage.warning('请选择收货地址');
+        return;
+      }
+      
+      if (isProcessing.value) return;
+      
+      try {
+        isProcessing.value = true;
+        
+        const response = await fetch("/goods_detail", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'createorder'
+          },
+          body: JSON.stringify({
+            goods_id: route.params.productId,
+            buyer_id: route.query.current_user_id,
+            address_id: selectedAddress.value.address_id
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+          ElMessage.success('下单成功！');
+          showAddressDialog.value = false;
+          // 可以在这里添加跳转到订单页面或其他后续操作
+        } else {
+          ElMessage.error('下单失败，请重试');
+        }
+      } catch (error) {
+        console.error('Error creating order:', error);
+        ElMessage.error('下单失败，请稍后重试');
+      } finally {
+        isProcessing.value = false;
+      }
+    }
+
+    // 添加收藏状态变量
+    const isCollected = ref(false);
+    
+    // 修改收藏处理函数
+    async function handleCollect() {
+      try {
+        const response = await fetch("/goods_detail", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'collect'
+          },
+          body: JSON.stringify({
+            goods_id: route.params.productId,
+            user_id: route.query.current_user_id,
+            collect: !isCollected.value
+          })
+        });
+        
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        const data = await response.json();
+        if (data.success) {
+          isCollected.value = !isCollected.value;
+          ElMessage.success(isCollected.value ? '收藏成功' : '已取消收藏');
+        } else {
+          ElMessage.error('操作失败，请重试');
+        }
+      } catch (error) {
+        console.error('Error toggling collect:', error);
+        ElMessage.error('网络错误，请稍后重试');
+      }
+    }
+
+    // 添加举报相关的响应式变量
+    const showReportDialog = ref(false);
+    const reportFormRef = ref(null);
+    const reportForm = ref({
+      content: '',
+      type: '', // 'goods', 'comment', 'reply'
+      goods_comment_id: null,
+      second_goods_comment_id: null
+    });
+
+    // 处理举报
+    function handleReport(type, commentId = null, replyId = null) {
+      reportForm.value = {
+        content: '',
+        type,
+        goods_comment_id: commentId,
+        second_goods_comment_id: replyId
+      };
+      showReportDialog.value = true;
+    }
+
+    // 关闭举报对话框
+    function handleCloseReport() {
+      reportFormRef.value?.resetFields();
+      showReportDialog.value = false;
+    }
+
+    // 提交举报
+    async function submitReport() {
+      if (!reportFormRef.value) return;
+      
+      try {
+        await reportFormRef.value.validate();
+        
+        const reportData = {
+          accuser_id: parseInt(route.query.current_user_id),
+          content: reportForm.value.content
+        };
+
+        // 根据举报类型添加相应的ID
+        if (reportForm.value.type === 'goods') {
+          reportData.accused_goods_id = route.params.productId;
+        } else if (reportForm.value.type === 'comment') {
+          reportData.goods_comment_id = reportForm.value.goods_comment_id;
+        } else if (reportForm.value.type === 'reply') {
+          reportData.second_goods_comment_id = reportForm.value.second_goods_comment_id;
+        }
+
+        const response = await fetch("/goods_detail", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'accuse'
+          },
+          body: JSON.stringify(reportData)
+        });
+
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        const data = await response.json();
+        if (data.success) {
+          ElMessage.success('举报已提交');
+          handleCloseReport();
+        } else {
+          ElMessage.error('举报提交失败，请重试');
+        }
+      } catch (error) {
+        console.error('Error submitting report:', error);
+        ElMessage.error('举报提交失败，请稍后重试');
+      }
+    }
+
     onMounted(() => {
       // console.log("组件已挂载");
       document.addEventListener('click', closeDropdown);
@@ -1274,7 +1569,22 @@ export default {
       handleCloseEdit,
       initEditForm,
       uploadUrl,
-      handleRemove
+      handleRemove,
+      isProcessing,
+      showAddressDialog,
+      addressList,
+      selectedAddress,
+      showAddressSelection,
+      handleAddressSelect,
+      confirmOrder,
+      isCollected,
+      handleCollect,
+      showReportDialog,
+      reportFormRef,
+      reportForm,
+      handleReport,
+      handleCloseReport,
+      submitReport,
     };
   }
 };
@@ -1985,6 +2295,184 @@ export default {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 20px;
+  padding-top: 20px;
+}
+
+.purchase-button {
+  width: 100%;
+  height: 50px;
+  margin: 20px 0;
+  background: linear-gradient(135deg, #ff6a00, #ff5000);
+  border: none;
+  font-size: 18px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(255, 80, 0, 0.2);
+}
+
+.purchase-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 80, 0, 0.3);
+  background: linear-gradient(135deg, #ff7a00, #ff6000);
+}
+
+.purchase-button:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(255, 80, 0, 0.2);
+}
+
+.purchase-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.purchase-button .el-icon {
+  font-size: 20px;
+  animation: bounce 1s ease infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.collect-button {
+  width: 100%;
+  height: 45px;
+  margin: 10px 0;
+  border: 2px solid #ffd04b;
+  font-size: 16px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.collect-button:hover {
+  background-color: #fdf6ec;
+  transform: translateY(-1px);
+}
+
+.collect-button .el-icon {
+  font-size: 20px;
+  transition: all 0.3s ease;
+}
+
+.collect-button .collected {
+  color: #e6a23c;
+  animation: star-bounce 0.5s ease;
+}
+
+@keyframes star-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+/* 调整购买按钮的margin,让两个按钮之间有合适的间距 */
+.purchase-button {
+  margin: 10px 0 20px;
+}
+
+/* 添加按钮容器样式 */
+.action-buttons-container {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+/* 修改收藏按钮样式 */
+.collect-button {
+  flex: 1;
+  height: 50px; /* 与购买按钮保持相同高度 */
+  border: 2px solid #ffd04b;
+  font-size: 16px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  margin: 0; /* 移除原有的margin */
+}
+
+/* 修改购买按钮样式 */
+.purchase-button {
+  flex: 1;
+  height: 50px;
+  background: linear-gradient(135deg, #ff6a00, #ff5000);
+  border: none;
+  font-size: 16px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(255, 80, 0, 0.2);
+  margin: 0; /* 移除原有的margin */
+}
+
+.description-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.report-goods-btn {
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.report-comment-btn,
+.report-reply-btn {
+  color: #909399;
+  padding: 4px 8px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.report-comment-btn:hover,
+.report-reply-btn:hover {
+  color: #f56c6c;
+}
+
+.comment-header,
+.reply-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.el-icon {
+  margin-right: 4px;
+}
+
+/* 自定义表格样式 */
+:deep(.el-table) {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+:deep(.el-table__row) {
+  cursor: pointer;
+}
+
+:deep(.el-table__row.current-row) {
+  background-color: #fdf6ec;
 }
 </style> 
