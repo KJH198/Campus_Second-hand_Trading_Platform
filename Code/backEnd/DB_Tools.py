@@ -6,7 +6,6 @@ import random
 
 # 自己修改为本地存储图片文件夹的绝对路径 + \\
 picturePath = 'C:\\Users\\kjh15\\Desktop\\Project\\Campus_Second-hand_Trading_Platform\\Code\\picture\\'
-urlCnt = 0
 Default_url = 'default.jpg'
 
 # 添加管理员
@@ -54,12 +53,14 @@ def reDefineUser(info): # user_id, user_name, password, picture, pictureName, ot
 
 # 生成图片URL
 def urlGenerator(binaryPicture,pictureName):
-    global urlCnt
     global picturePath
+    with open (picturePath[:-8] + 'urlCnt.txt','r') as file:
+        urlCnt = int(file.read())
     local_picture_name = str(urlCnt) + getPicturetype(pictureName)
-    with open(picturePath+local_picture_name, 'wb') as file:     # 二进制写入
+    with open(picturePath + local_picture_name, 'wb') as file:     # 二进制写入
         file.write(binaryPicture)
-    urlCnt += 1
+    with open (picturePath[:-8] + 'urlCnt.txt','w') as file:
+        file.write(str(urlCnt + 1))
     return local_picture_name
 
 # 删除用户图片
@@ -221,6 +222,7 @@ def reDefineGoods(info):  # goods_id,seller_id,pictures,goods_name,category_name
 def getUnselledGoods(num):
     goods = Goods.query.filter_by(goods_state = "在售").all()
     data = []
+    if (len(goods) == 0): return data
     goodsIdSet = set()
     for i in range(num):
         goodsIdSet.add(random.randint(0, len(goods) - 1))

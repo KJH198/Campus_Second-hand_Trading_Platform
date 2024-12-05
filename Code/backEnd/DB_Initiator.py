@@ -137,6 +137,7 @@ class Announcement(db.Model):
     title = db.Column(db.String(80), nullable = False)
     content = db.Column(db.Text, nullable = False)
     
+# 商品图片表
 class Picture(db.Model):
     picture_url = db.Column(db.String(200), primary_key=True)
     goods_id = db.Column(db.Integer, db.ForeignKey('goods.goods_id'))
