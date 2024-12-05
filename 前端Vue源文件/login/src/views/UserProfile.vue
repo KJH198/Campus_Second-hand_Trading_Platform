@@ -255,16 +255,12 @@
             <el-icon><Plus /></el-icon>
           </el-upload>
           
-          <!-- 添加预览大图的组件 -->
-          <el-image
-            v-if="previewUrl"
-            style="display: none"
-            :src="previewUrl"
-            :preview-src-list="[previewUrl]"
-            :initial-index="0"
-            fit="contain"
-            hide-on-click-modal
-            ref="imagePreview"
+          <!-- 添加图片预览组件 -->
+          <el-image-viewer
+            v-if="showViewer"
+            :url-list="fileList.map(file => file.url)"
+            :initial-index="previewIndex"
+            @close="showViewer = false"
           />
         </el-form-item>
       </el-form>
@@ -284,13 +280,15 @@
   import { ElMessage } from 'element-plus';
   import { Bell, Camera, Plus } from '@element-plus/icons-vue';
   import defaultAvatar from '@/assets/tubiao.png';
+  import { ElImageViewer } from 'element-plus';
   
   export default {
     name: 'UserProfile',
     components: {
       Bell,
       Camera,
-      Plus
+      Plus,
+      ElImageViewer
     },
     setup() {
       const route = useRoute();
@@ -785,6 +783,9 @@
         }
       }
   
+      const showViewer = ref(false);
+      const previewIndex = ref(0);
+
       return {
         userAvatar,
         userForm,
@@ -827,8 +828,9 @@
         handleRemove,
         handlePreview,
         beforeUpload,
-        submitPublish
-
+        submitPublish,
+        showViewer,
+        previewIndex
       };
     }
   };
