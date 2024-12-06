@@ -122,7 +122,7 @@ def getUserInfo(user_id):
 
 #获取用户发布的商品
 def getUserGoods(user_id):
-    goods = Goods.query.filter_by(seller_id = user_id).all()
+    goods = Goods.query.filter_by(seller_id = user_id,goods_state = '在售').all()
     size = len(goods)
     data = []
     for i in range(0,size):
@@ -142,6 +142,45 @@ def getUserGoods(user_id):
             data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_byte_stream_list[0]})
     return data
 
+def getBuyerOrders(user_id):
+    orders = Order.query.filter_by(buyer_id = user_id)
+    data = []
+    for order in orders:
+        goods_id = order.goods_id
+        order_state = order.order_state
+        deal_time = order.deal_time
+        goods = Goods.query.filter_by(goods_id = goods_id).first()
+        goods_name = goods.goods_name
+        goods_price = goods.goods_price
+        first_picture = Picture.query.filter_by(goods_id = goods_id).first() # 只获取第一个图片
+        
+        picture_local_url = picturePath + first_picture.picture_url
+        with open(picture_local_url,'rb') as file:
+            picture_byte_stream = file.read()
+        picture = base64.b64encode(picture_byte_stream).decode("ascii")
+        data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,
+                     "order_state":order_state,"picture":picture,'deal_time':deal_time})
+    return data
+
+def getSellerOrders(user_id):
+    goods_list = Goods.query.filter_by(seller_id = user_id,goods_state = '已售出').first()
+    data = []
+    for goods in goods_list:
+        goods_id = goods.goods_id
+        order = Order.query.filter_by(goods_id = goods_id).first()
+        order_state = order.order_state
+        deal_time = order.deal_time
+        goods_name = goods.goods_name
+        goods_price = goods.goods_price
+        first_picture = Picture.query.filter_by(goods_id = goods_id).first() # 只获取第一个图片
+        
+        picture_local_url = picturePath + first_picture.picture_url
+        with open(picture_local_url,'rb') as file:
+            picture_byte_stream = file.read()
+        picture = base64.b64encode(picture_byte_stream).decode("ascii")
+        data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,
+                     "order_state":order_state,"picture":picture,'deal_time':deal_time})
+    return data
 ############################################# 管理员管理 #######################################################################
 # 添加管理员
 def addManagers(mangers):  
@@ -530,8 +569,12 @@ def dealDown(goods_id,getIt):
     order = Order.query.filter_by(goods_id = goods_id).first()
     if getIt:
         goods = Goods.query.filter_by(goods_id = goods_id).first()
-        goods.goods_state = '已售'
-    db.session.delete(order)
+        goods.goods_state = '已售出'
+        order.order_state = '已送达'
+    else:
+        goods = Goods.query.filter_by(goods_id = goods_id).first()
+        goods.goods_state = '在售'
+        order.order_state = '已退款'
     db.session.commit()
     return True
 ##################################################### 收藏管理 #######################################################
