@@ -65,6 +65,17 @@
               >
                 编辑信息
               </el-button>
+              <el-button
+                v-if="!isCurrentUser"
+                type="danger"
+                size="small"
+                plain
+                @click="handleReport"
+                class="report-btn"
+              >
+                <el-icon><Warning /></el-icon>
+                举报用户
+              </el-button>
             </div>
             
           </div>
@@ -114,9 +125,10 @@
           </div>
         </div>
              <!-- 添加收藏商品显示组件 -->
-    <div class="favorites-container">
-      <h2>我的收藏</h2>
-      <div class="favorites-grid">
+    <div v-if="isCurrentUser" class="favorites-container">
+      <div class="favorites-section">
+        <h2>我的收藏</h2>
+      <div class="goods-grid">
         <div v-if="!favorites || favorites.length === 0" class="no-favorites">
           暂无收藏商品
         </div>
@@ -134,8 +146,8 @@
             <h3 class="favorite-name">{{ favorite.goods_name }}</h3>
             <p class="favorite-price">¥{{ favorite.goods_price }}</p>
           </div>
+          
         </div>
-      </div>
       
       <!-- 收藏商品分页控件 -->
       <div class="pagination" v-if="favorites.length > favoritesPageSize">
@@ -155,9 +167,11 @@
           @click="handleFavoritesPageChange(favoritesCurrentPage + 1)"
         >
           下一页
-        </button>
+          </button>
+        </div>
         </div>
       </div>
+    </div>
       </main>
   
       <!-- 系统公告弹窗 -->
@@ -308,13 +322,43 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 添加举报对话框 -->
+    <el-dialog
+      v-model="showReportDialog"
+      title="举报用户"
+      width="30%"
+      @close="handleCloseReport"
+    >
+      <el-form
+        ref="reportFormRef"
+        :model="reportForm"
+        :rules="reportRules"
+        label-width="80px"
+      >
+        <el-form-item label="举报原因" prop="content">
+          <el-input
+            v-model="reportForm.content"
+            type="textarea"
+            :rows="4"
+            placeholder="请详细描述举报原因..."
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="handleCloseReport">取消</el-button>
+          <el-button type="primary" @click="submitReport">提交举报</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </template>
   
   <script>
   import { ref, computed, onMounted, onUnmounted } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { ElMessage } from 'element-plus';
-  import { Bell, Camera, Plus } from '@element-plus/icons-vue';
+  import { Bell, Camera, Plus, Warning } from '@element-plus/icons-vue';
   import defaultAvatar from '@/assets/tubiao.png';
   import { ElImageViewer } from 'element-plus';
   
@@ -324,7 +368,8 @@
       Bell,
       Camera,
       Plus,
-      ElImageViewer
+      ElImageViewer,
+      Warning
     },
     setup() {
       const route = useRoute();
@@ -519,8 +564,11 @@
             productId: good.goods_id
           },
           query: {
-            ...route.query,
-            isOwner: true  // 标记是否为商品所有者
+            //current_user_id: route.query.user_id,  // 当前浏览用户的ID
+            current_user_id: route.query.current_user_id,
+            userAvatar: route.query.userAvatar,
+            from_profile: 'true',  // 表示从个人页面进入
+            viewing_own_profile: route.query.current_user_id === route.query.user_id  // 是否在查看自己的个人页面
           }
         });
       }
@@ -533,8 +581,9 @@
             productId: favorite.goods_id
           },
           query: {
-            ...route.query,
-            current_user_id: route.query.user_id  // 确保传递用户ID
+            current_user_id: route.query.current_user_id,
+            userAvatar: route.query.userAvatar,
+            from_favorite: 'true'  // 添加标记，表示从收藏列表进入
           }
         });
       }
@@ -882,8 +931,69 @@
   
       // 判断是否是当前用户查看自己的页面
       const isCurrentUser = computed(() => {
-        return route.query.user_id === route.query.current_user_id;
+        return route.query.current_user_id === route.query.user_id;
       });
+  
+      // 举报相关的响应式变量
+      const showReportDialog = ref(false);
+      const reportFormRef = ref(null);
+      const reportForm = ref({
+        content: ''
+      });
+
+      const reportRules = {
+        content: [
+          { required: true, message: '请输入举报原因', trigger: 'blur' },
+          { min: 10, message: '举报原因至少10个字符', trigger: 'blur' }
+        ]
+      };
+
+      // 处理举报
+      function handleReport() {
+        reportForm.value.content = '';
+        showReportDialog.value = true;
+      }
+
+      // 关闭举报对话框
+      function handleCloseReport() {
+        reportFormRef.value?.resetFields();
+        showReportDialog.value = false;
+      }
+
+      // 提交举报
+      async function submitReport() {
+        if (!reportFormRef.value) return;
+        
+        try {
+          await reportFormRef.value.validate();
+          
+          const response = await fetch("/profile", {
+            method: "POST",
+            headers: {
+              'Content-Type': 'application/json',
+              'type': 'accuse'
+            },
+            body: JSON.stringify({
+              accuser_id: route.query.current_user_id,
+              accused_user_id: route.query.user_id,
+              content: reportForm.value.content
+            })
+          });
+
+          if (!response.ok) throw new Error('Network response was not ok');
+
+          const data = await response.json();
+          if (data.success) {
+            ElMessage.success('举报已提交');
+            handleCloseReport();
+          } else {
+            ElMessage.error('举报提交失败，请重试');
+          }
+        } catch (error) {
+          console.error('Error submitting report:', error);
+          ElMessage.error('举报提交失败，请稍后重试');
+        }
+      }
   
       return {
         userAvatar,
@@ -937,7 +1047,14 @@
         favoritesPagesTotal,
         paginatedFavorites,
         handleCollectChange,
-        isCurrentUser
+        isCurrentUser,
+        showReportDialog,
+        reportFormRef,
+        reportForm,
+        reportRules,
+        handleReport,
+        handleCloseReport,
+        submitReport
       };
     }
   };
@@ -1282,5 +1399,24 @@
 .page-info {
   font-size: 16px;
   color: #666;
+}
+
+/* 与 GoodDetails 页面相同的举报按钮样式 */
+.report-btn {
+  margin-left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.report-btn .el-icon {
+  margin-right: 4px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
 }
   </style>

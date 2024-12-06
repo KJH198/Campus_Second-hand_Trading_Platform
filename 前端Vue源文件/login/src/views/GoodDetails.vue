@@ -571,8 +571,10 @@ export default {
       router.push({
         name: 'UserProfile',
         query: {
-          user_id: route.query.current_user_id,  // 传递当前用户ID
-          userAvatar: route.query.userAvatar     // 传递用户头像
+          user_id: route.query.current_user_id,  // 使用当前用户的ID
+          current_user_id: route.query.current_user_id,  // 同样传递当前用户ID
+          userAvatar: route.query.userAvatar,
+          viewing_own_profile: 'true'  // 标记为查看自己的个人页面
         }
       });
     }
@@ -753,10 +755,11 @@ export default {
       router.push({
         name: 'UserProfile',
         query: {
-          user_id: sellerId.value,         // 卖家的用户ID
-          userAvatar: sellerPicture.value, // 卖家的头像
-          current_user_id: route.query.current_user_id, // 当前浏览用户的ID
-          isOwner: false                   // 标记不是本人的个人页面
+          user_id: sellerId.value,  // 使用卖家的ID
+          current_user_id: route.query.current_user_id,  // 保持当前用户的ID
+          userAvatar: sellerPicture.value,
+          isOwner: false,                   // 标记不是本人的个人页面
+          viewing_own_profile: 'false'
         }
       });
     }
@@ -786,6 +789,7 @@ export default {
     async function fetchGoodsDetail() {
       try {
         console.log("发送请求，商品ID:", route.params.productId);
+        console.log("当前用户ID:", route.query.current_user_id);
         const response = await fetch("/goods_detail", {
           method: "POST",
           headers: {
@@ -794,7 +798,7 @@ export default {
           },
           body: JSON.stringify({
             goods_id: route.params.productId,
-            current_user_id: route.query.current_user_id  // 使用当前浏览用户的ID
+            user_id: route.query.current_user_id  // 使用当前浏览用户的ID
           })
         });
 
@@ -827,7 +831,16 @@ export default {
         beginTime.value = data.begin_time;
         
         // 更新收藏状态
-        isCollected.value = data.collected;
+        // 如果是从收藏列表进入，直接设置为已收藏
+        if (route.query.from_favorite === 'true') {
+          isCollected.value = true;
+        } else {
+          // 否则使用后端返回的收藏状态
+          isCollected.value = data.collected;
+        }
+        if (isOwner.value) {
+          await initEditForm();
+        }
 
       } catch (error) {
         console.error('Error fetching goods detail:', error);
@@ -876,24 +889,29 @@ export default {
 
     // 添加日期格式化函数
     function formatDate(dateString) {
-      if (!dateString) return '';
-      const date = new Date(dateString);
       const now = new Date();
-      const diff = now - date;
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const publishDate = new Date(dateString);
+      const timeDiff = now - publishDate;
+      const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
       
-      if (days === 0) {
-        return '今天上架';
-      } else if (days === 1) {
-        return '昨天上架';
-      } else if (days < 7) {
-        return `${days}天前上架`;
+      if (daysDiff < 0) {
+        return "今天发布";
+      } else if (daysDiff === 0) {
+        // 计算小时差
+        const hoursDiff = Math.floor(timeDiff / (1000 * 60 * 60));
+        if (hoursDiff <= 0) {
+          // 计算分钟差
+          const minutesDiff = Math.floor(timeDiff / (1000 * 60));
+          if (minutesDiff <= 0) {
+            return "刚刚发布";
+          }
+          return `${minutesDiff}分钟前发布`;
+        }
+        return `${hoursDiff}小时前发布`;
+      } else if (daysDiff === 1) {
+        return "昨天发布";
       } else {
-        return date.toLocaleDateString('zh-CN', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
+        return `${daysDiff}天前发布`;
       }
     }
 
@@ -1140,7 +1158,12 @@ export default {
     const showEditDialog = ref(false);
     const editFormRef = ref(null);
     const isOwner = computed(() => {
-      return route.query.isOwner === 'true';
+      console.log('current_user_id:', route.query.current_user_id);
+      console.log('seller_id:', sellerId.value);
+      console.log('from_profile:', route.query.from_profile);
+      return route.query.from_profile === 'true' && 
+         route.query.viewing_own_profile === 'true' && 
+         route.query.current_user_id === sellerId.value?.toString();
     });
     const fileList = ref([]);
 
@@ -1470,10 +1493,10 @@ export default {
           isCollected.value = !isCollected.value;
           ElMessage.success(isCollected.value ? '收藏成功' : '已取消收藏');
           // 触发一个自定义事件，通知父组件收藏状态已更改
-        emit('collect-changed', {
-          goods_id: route.params.productId,
-          collected: isCollected.value
-        });
+        //emit('collect-changed', {
+        //  goods_id: route.params.productId,
+        //  collected: isCollected.value
+        //});
         } else {
           ElMessage.error('操作失败，请重试');
         }

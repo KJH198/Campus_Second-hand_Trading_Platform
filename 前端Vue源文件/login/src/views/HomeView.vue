@@ -224,7 +224,9 @@ export default {
           path: '/profile',
           query: {
             user_id: user_id.value,
-            phone_number: phone_number.value
+            current_user_id: user_id.value,  // 添加这一行，因为查看自己的个人页面时，current_user_id 就是 user_id
+            phone_number: phone_number.value,
+            userAvatar: userAvatar.value
           },
           state: {
             userInfo: userData // 包含用户的详细信息
