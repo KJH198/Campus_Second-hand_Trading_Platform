@@ -308,7 +308,7 @@ def getGoodsInfo(goods_id,user_id):
     goods_state = goods.goods_state
     heat = goods.heat
     return {"goods_name":goods_name,"goods_price":goods_price,"goods_pictures":pictures_byte_stream_list,"seller_name":seller_name,
-            "seller_picture":seller_picture,"begin_time":begin_time, "category_name":category_name,
+            "seller_picture":seller_picture,"begin_time":begin_time, "category_name":category_name,"seller_id":seller_id,
             "goods_description":goods_description,"goods_state":goods_state,"heat":heat,"collected":checkCollection(goods_id,user_id), "pictures_type":pictures_type}
     
 # 按关键字搜索商品
