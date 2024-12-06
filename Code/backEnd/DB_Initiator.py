@@ -54,14 +54,14 @@ class Goods(db.Model):
     category_name = db.Column(db.String(80), nullable = False)  
     goods_price = db.Column(db.String(80), nullable = False)
     goods_description = db.Column(db.Text, nullable = True)
-    goods_state = db.Column(db.String(80), nullable = False)    # 在售,已售
+    goods_state = db.Column(db.String(80), nullable = False)    # 在售,已售出
     heat = db.Column(db.Integer, nullable = False)
     
 # 订单表
 class Order(db.Model):
     goods_id = db.Column(db.Integer, primary_key=True)
     buyer_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable = False) # 外键
-    order_state = db.Column(db.String(80), nullable = False)
+    order_state = db.Column(db.String(80), nullable = False)    # 已下单,已送达,已退款
     deal_time = db.Column(db.DateTime, nullable = False)
 
 # 消息表
