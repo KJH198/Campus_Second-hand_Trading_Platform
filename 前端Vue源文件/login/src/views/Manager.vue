@@ -7,12 +7,9 @@
         
         <div class="user-section">
           <div class="user-profile">
-            <img 
-              :src="adminAvatar" 
-              alt="管理员头像" 
-              class="avatar" 
-              @click.stop="toggleDropdown"
-            />
+            <span class="admin-greeting" @click.stop="toggleDropdown">
+              尊敬的管理员{{ adminName }}，您好！
+            </span>
             <div 
               v-show="dropdownVisible" 
               class="dropdown-menu"
@@ -334,7 +331,7 @@ export default {
       try {
         await announceFormRef.value.validate();
         
-        const response = await fetch("/goods_detail", {
+        const response = await fetch("/manager", {
           method: "POST",
           headers: {
             'Content-Type': 'application/json',
@@ -356,6 +353,7 @@ export default {
         if (data.success) {
           ElMessage.success('公告发布成功！');
           handleCloseDialog();
+          await fetchManagerInfo();
         } else {
           ElMessage.error('公告发布失败，请重试');
         }
@@ -545,11 +543,7 @@ export default {
 }
 
 .avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 2px solid white;
+  display: none;
 }
 
 .dropdown-menu {
@@ -787,5 +781,21 @@ export default {
 
 :deep(.el-table) {
   margin-top: 20px;
+}
+
+.admin-greeting {
+  color: white;
+  font-size: 16px;
+  font-family: "Microsoft YaHei", sans-serif;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.admin-greeting:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
 }
 </style> 
