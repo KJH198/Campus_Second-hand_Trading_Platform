@@ -180,7 +180,7 @@ def unban(user_id):
 
 def getMangerAnnouncement(manger_name):
     announcements = Announcement.query.filter_by(manger_name = manger_name).all()
-    data = [{"announcement_id":announcement.announcement_id,"manger_name":announcement.manger_name,
+    data = [{"announce_id":announcement.announcement_id,"manger_name":announcement.manger_name,
              "deliver_time":announcement.deliver_time,"title":announcement.title,"content":announcement.content} 
             for announcement in announcements]
     return data
@@ -505,7 +505,7 @@ def sendAnnouncement(manger_name,title,content):
 
 def getAllAnnouncement():
     announcements = Announcement.query.all()
-    data = [{"manger_name":announcement.manger_name,"deliver_time":announcement.deliver_time,"title":announcement.title,"content":announcement.content} for announcement in announcements]
+    data = [{"announce_id":announcement.announcement_id,"manger_name":announcement.manger_name,"deliver_time":announcement.deliver_time,"title":announcement.title,"content":announcement.content} for announcement in announcements]
     return data
 
 def deleteAnnouncement(announcement_id):
@@ -630,6 +630,7 @@ def deleteAccusation(accusation_id):
     accusation = Accusation.query.filter_by(accusation_id = accusation_id).first()
     db.session.delete(accusation)
     db.session.commit()
+    return True
 ################################################### 地址管理 ##############################################################
 # 添加地址
 def addAddress(user_id,receiver_name,phone_number,address):
