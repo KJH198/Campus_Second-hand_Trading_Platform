@@ -15,7 +15,6 @@ app.config['DEBUG'] = True
 db = SQLAlchemy(app)
 
 #################################### 定义数据表 ########################################
-
 # 用户表
 class User(db.Model):
     user_id = db.Column(db.Integer, primary_key=True)
@@ -24,6 +23,7 @@ class User(db.Model):
     password = db.Column(db.String(120), nullable=False)
     picture_url = db.Column(db.String(200), nullable=False)  # 可空
     other_information = db.Column(db.Text, nullable=True)  # 可空
+    isbanned = db.Column(db.Boolean, nullable=False) 
 
 # 管理员表
 class Manager(db.Model):  # 注意这里继承了 db.Model
@@ -141,7 +141,7 @@ class Announcement(db.Model):
 class Picture(db.Model):
     picture_url = db.Column(db.String(200), primary_key=True)
     goods_id = db.Column(db.Integer, db.ForeignKey('goods.goods_id'))
-    
+
 ##################################### 调用接口 ########################################
 
 # 创建所有表 
