@@ -478,10 +478,10 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue';
 import { ElImageViewer } from 'element-plus';
 
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import defaultAvatar from '@/assets/tubiao.png';
 import lanqiuImage from '@/assets/lanqiu.png';
 import xuexiImage from '@/assets/xuexi.png';
@@ -525,6 +525,7 @@ export default {
   },
   setup({ emit }) {
     const route = useRoute();
+    const router = useRouter();  // 确保引入 useRouter
     const userAvatar = ref(route.query.userAvatar || defaultAvatar);
     const dropdownVisible = ref(false);
     const announcements = ref([]);
@@ -542,6 +543,8 @@ export default {
     const newComment = ref('');
     const comments = ref([]);
     const commentActions = ref(new Map()); // 用于存储用户对每条评论的操作状态
+
+    const sellerId = ref(null);  // 定义 sellerId
 
     const uploadUrl = '/goods_picture_show';
 
@@ -565,7 +568,13 @@ export default {
     }
 
     function viewProfile() {
-      console.log("查看个人信息");
+      router.push({
+        name: 'UserProfile',
+        query: {
+          user_id: route.query.current_user_id,  // 传递当前用户ID
+          userAvatar: route.query.userAvatar     // 传递用户头像
+        }
+      });
     }
 
     function viewNotifications() {
@@ -741,8 +750,15 @@ export default {
     }
 
     function contactSeller() {
-      // 实现联系卖家的逻辑
-      console.log('联系卖家');
+      router.push({
+        name: 'UserProfile',
+        query: {
+          user_id: sellerId.value,         // 卖家的用户ID
+          userAvatar: sellerPicture.value, // 卖家的头像
+          current_user_id: route.query.current_user_id, // 当前浏览用户的ID
+          isOwner: false                   // 标记不是本人的个人页面
+        }
+      });
     }
 
     async function toggleFavorite() {
@@ -778,7 +794,7 @@ export default {
           },
           body: JSON.stringify({
             goods_id: route.params.productId,
-            user_id: route.query.current_user_id  // 添加用户ID
+            current_user_id: route.query.current_user_id  // 使用当前浏览用户的ID
           })
         });
 
@@ -789,7 +805,8 @@ export default {
         const data = await response.json();
         console.log("获取到商品详情数据：", data);
 
-        // 处理卖家头像
+        // 处理卖家ID和头像
+        sellerId.value = data.seller_id;
         if (data.seller_picture) {
           sellerPicture.value = URL.createObjectURL(base64ToBlob(data.seller_picture));
         }
@@ -1122,7 +1139,9 @@ export default {
     // 添加新的响应式变量
     const showEditDialog = ref(false);
     const editFormRef = ref(null);
-    const isOwner = ref(route.query.isOwner === 'true');
+    const isOwner = computed(() => {
+      return route.query.isOwner === 'true';
+    });
     const fileList = ref([]);
 
     function handleRemove(file) {

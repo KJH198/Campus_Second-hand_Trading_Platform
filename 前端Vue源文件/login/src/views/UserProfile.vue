@@ -58,7 +58,13 @@
               <p><strong>用户名：</strong>{{ userForm.user_name }}</p>
               <p><strong>手机号：</strong>{{ userForm.phone_number }}</p>
               <p><strong>简介：</strong>{{ userForm.other_information }}</p>
-              <el-button type="primary" @click="openEditDialog">编辑信息</el-button>
+              <el-button 
+                v-if="isCurrentUser" 
+                type="primary" 
+                @click="openEditDialog"
+              >
+                编辑信息
+              </el-button>
             </div>
             
           </div>
@@ -66,8 +72,14 @@
           <!-- 右侧商品列表 -->
           <div class="my-goods-section">
             <div class="section-header">
-              <h2 class="section-title">我发布的商品</h2>
-              <el-button type="primary" @click="openPublishDialog">发布商品</el-button>
+              <h2 class="section-title">已发布的商品</h2>
+              <el-button 
+                v-if="isCurrentUser"
+                type="primary" 
+                @click="openPublishDialog"
+              >
+                发布商品
+              </el-button>
             </div>
             <div class="goods-grid">
               <div 
@@ -868,6 +880,11 @@
         window.removeEventListener('collect-changed', handleCollectChange);
       });
   
+      // 判断是否是当前用户查看自己的页面
+      const isCurrentUser = computed(() => {
+        return route.query.user_id === route.query.current_user_id;
+      });
+  
       return {
         userAvatar,
         userForm,
@@ -919,7 +936,8 @@
         favoritesPageSize,
         favoritesPagesTotal,
         paginatedFavorites,
-        handleCollectChange
+        handleCollectChange,
+        isCurrentUser
       };
     }
   };
