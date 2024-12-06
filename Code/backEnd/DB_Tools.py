@@ -8,29 +8,15 @@ import random
 picturePath = 'E:\\Junior_Autumn\\Database\\Final_Project\\Campus_Second-hand_Trading_Platform\\Code\\backEnd\\uploads\\'
 Default_url = 'default.jpg'
 
-# 添加管理员
-def addManagers(mangers):  
-    for manger in mangers:
-        newManager = Manager(
-            manager_name = manger[0],
-            password = manger[1])
-        db.session.add(newManager)
-        db.session.commit()
-    return True
-
-# 管理员身份校验
-def mangerLoginJudge(manager_name,password):
-    manager = Manager.query.filter_by(manager_name = manager_name).first()
-    if manager and manager.password == password: return True    
-    return False
-
+############################################## 用户管理 ################################################################
 # 用户注册
 def register(user_name,phone_number,password):
     newUser = User(
             user_name = user_name,
             phone_number = phone_number,
             password = password, 
-            picture_url = Default_url)
+            picture_url = Default_url, 
+            isbanned = False)
     db.session.add(newUser)
     db.session.commit()
     return True
@@ -96,10 +82,12 @@ def loginJudge(phone_number,password):
     user = User.query.filter_by(phone_number = phone_number).first()
     if user:
         if user.password == password:
-            addLog(user,True)
-            return {"success":True,"user_id":user.user_id}
+            if user.isbanned == False:
+                addLog(user,True)
+                return {"success":True,"user_id":user.user_id}
+            else: return {"success":False,"info":"banned"}
         addLog(user,False)  # 记录登录失败日志
-    return {"success":False}
+    return {"success":False,"info":'wrong'}
 
 # 记录日志
 def addLog(user,log_state):
@@ -127,7 +115,10 @@ def getUserInfo(user_id):
         picture_byte_stream = file.read()
     base64_str = base64.b64encode(picture_byte_stream).decode("ascii")
     other_information = user.other_information
-    return {"success":True, "phone_number":phone_number,"user_name":user_name,"password":password,"picture_url":base64_str,"other_information":other_information}
+    isbanned = user.isbanned
+    return {"success":True, "phone_number":phone_number,"user_name":user_name,
+            "password":password,"picture_url":base64_str,"other_information":other_information,
+            "isbanned":isbanned}
 
 #获取用户发布的商品
 def getUserGoods(user_id):
@@ -151,7 +142,49 @@ def getUserGoods(user_id):
             data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_byte_stream_list[0]})
     return data
 
-################################################################################################################
+############################################# 管理员管理 #######################################################################
+# 添加管理员
+def addManagers(mangers):  
+    for manger in mangers:
+        newManager = Manager(
+            manager_name = manger[0],
+            password = manger[1])
+        db.session.add(newManager)
+        db.session.commit()
+    return True
+
+# 管理员身份校验
+def mangerLoginJudge(manager_name,password):
+    manager = Manager.query.filter_by(manager_name = manager_name).first()
+    if manager != None and manager.password == password: return True  
+    return False
+
+# 查看用户登录日志
+def searchUserLog(user_id):
+    logs = Log.query.filter_by(user_id = user_id)
+    return [{"log_time":log.log_time,"log_state":log.log_state} for log in logs]
+
+# 封禁用户
+def ban(user_id):
+    user = User.query.filter_by(user_id = user_id).first()
+    user.isbanned = True
+    db.session.commit()
+    return True
+
+# 解封用户
+def unban(user_id):
+    user = User.query.filter_by(user_id = user_id).first()
+    user.isbanned = False
+    db.session.commit()
+    return True
+
+def getMangerAnnouncement(manger_name):
+    announcements = Announcement.query.filter_by(manger_name = manger_name).all()
+    data = [{"announcement_id":announcement.announcement_id,"manger_name":announcement.manger_name,
+             "deliver_time":announcement.deliver_time,"title":announcement.title,"content":announcement.content} 
+            for announcement in announcements]
+    return data
+############################################# 商品管理 #####################################################################
 # 添加商品
 def addGoods(seller_id):
     newGoods = Goods(
@@ -475,13 +508,6 @@ def getAllAnnouncement():
     data = [{"manger_name":announcement.manger_name,"deliver_time":announcement.deliver_time,"title":announcement.title,"content":announcement.content} for announcement in announcements]
     return data
 
-def getMangerAnnouncement(manger_name):
-    announcements = Announcement.query.filter_by(manger_name = manger_name).all()
-    data = [{"announcement_id":announcement.announcement_id,"manger_name":announcement.manger_name,
-             "deliver_time":announcement.deliver_time,"title":announcement.title,"content":announcement.content} 
-            for announcement in announcements]
-    return data
-
 def deleteAnnouncement(announcement_id):
     announcement = Announcement.query.filter_by(announcement_id = announcement_id).first()
     db.session.delete(announcement)
@@ -537,8 +563,21 @@ def checkCollection(goods_id,user_id):
 def getUserCollection(user_id):
     collections = Collection.query.filter_by(user_id = user_id).all()
     data = []
+    goods_id_list = []
     for collection in collections:
-        data.append(collection.goods_id)
+        goods_id_list.append(collection.goods_id)
+    for id in goods_id_list:
+        randGoods = Goods.query.filter_by(goods_id = id).first()
+        goods_id = randGoods.goods_id
+        goods_name = randGoods.goods_name
+        goods_price = randGoods.goods_price
+        first_picture = Picture.query.filter_by(goods_id = goods_id).first() # 只获取第一个图片
+        
+        picture_local_url = picturePath + first_picture.picture_url
+        with open(picture_local_url,'rb') as file:
+            picture_byte_stream = file.read()
+        picture = base64.b64encode(picture_byte_stream).decode("ascii")
+        data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":picture})
     return data
 
 ################################################### 举报管理 ##############################################################
@@ -578,11 +617,11 @@ def getAccusations():
         info['accuser_id'] = accuser_id
         info['content'] = content
         if (accused_user_id != None): info['accused_user_id'] = accused_user_id
-        elif (accused_goods_id != None): info['accused_user_id'] = accused_goods_id
-        elif (order_comment_id != None): info['accused_user_id'] = order_comment_id
-        elif (secondary_order_comment_id != None): info['accused_user_id'] = secondary_order_comment_id
-        elif (goods_consultation_id != None): info['accused_user_id'] = goods_consultation_id
-        elif (goods_consultation_reply_id != None): info['accused_user_id'] = goods_consultation_reply_id
+        elif (accused_goods_id != None): info['accused_goods_id'] = accused_goods_id
+        elif (order_comment_id != None): info['order_comment_id'] = order_comment_id
+        elif (secondary_order_comment_id != None): info['secondary_order_comment_id'] = secondary_order_comment_id
+        elif (goods_consultation_id != None): info['goods_comment_id'] = goods_consultation_id
+        elif (goods_consultation_reply_id != None): info['second_goods_comment_id'] = goods_consultation_reply_id
         data.append(info)
     return data
     

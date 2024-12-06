@@ -523,7 +523,7 @@ export default {
     Warning,
     ElImageViewer
   },
-  setup() {
+  setup({ emit }) {
     const route = useRoute();
     const userAvatar = ref(route.query.userAvatar || defaultAvatar);
     const dropdownVisible = ref(false);
@@ -1450,9 +1450,16 @@ export default {
         if (data.success) {
           isCollected.value = !isCollected.value;
           ElMessage.success(isCollected.value ? '收藏成功' : '已取消收藏');
+          // 触发一个自定义事件，通知父组件收藏状态已更改
+        emit('collect-changed', {
+          goods_id: route.params.productId,
+          collected: isCollected.value
+        });
         } else {
           ElMessage.error('操作失败，请重试');
         }
+
+
       } catch (error) {
         console.error('Error toggling collect:', error);
         ElMessage.error('网络错误，请稍后重试');

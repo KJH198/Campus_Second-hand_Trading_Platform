@@ -299,7 +299,7 @@
   </template>
   
   <script>
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, onUnmounted } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { ElMessage } from 'element-plus';
   import { Bell, Camera, Plus } from '@element-plus/icons-vue';
@@ -375,7 +375,35 @@
         const start = (currentPage.value - 1) * pageSize;
         return myGoods.value.slice(start, start + pageSize);
       });
-  
+      
+        // base64 转 Blob 函数
+    function base64ToBlob(base64) {
+      try {
+        // 解码 base64 字符串
+        const byteCharacters = atob(base64);
+        const byteArrays = [];
+
+        // 将字符串转换为字节数组
+        for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+          const slice = byteCharacters.slice(offset, offset + 512);
+          const byteNumbers = new Array(slice.length);
+          
+          for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+          }
+
+          const byteArray = new Uint8Array(byteNumbers);
+          byteArrays.push(byteArray);
+        }
+
+        // 创建 Blob 对象
+        return new Blob(byteArrays, { type: 'image/jpeg' });
+      } catch (error) {
+        console.error('Error converting base64 to Blob:', error);
+        return null;
+      }
+    }
+
      
   
       // 打开编辑对话框
@@ -488,12 +516,16 @@
       // 跳转至收藏商品详情
       function goToGoodsDetails(favorite) {
         router.push({
-        name: 'GoodsDetails',
-        params: { 
-          productId: favorite.goods_id
-        }
-      });
-    }
+          name: 'GoodDetails',
+          params: { 
+            productId: favorite.goods_id
+          },
+          query: {
+            ...route.query,
+            current_user_id: route.query.user_id  // 确保传递用户ID
+          }
+        });
+      }
   
       function getStatusText(status) {
         const statusMap = {
@@ -522,7 +554,7 @@
               user_id: route.query.user_id
             })
           });
-  
+          console.log("response:", response);
           if (!response.ok) throw new Error('获取用户信息失败');
   
           const data = await response.json();
@@ -575,8 +607,7 @@
       // 获取收藏商品 TODO：后端
       async function fetchFavorites() {
     try {
-      // 第一步：获取收藏的商品ID列表
-      const favoritesResponse = await fetch("/user_profile", {
+      const response = await fetch("/user_profile", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -587,42 +618,20 @@
         })
       });
 
-      if (!favoritesResponse.ok) throw new Error('获取收藏列表失败');
+      if (!response.ok) throw new Error('获取收藏失败');
 
-      const favoritesData = await favoritesResponse.json();
-      if (!favoritesData.success) {
-        throw new Error(favoritesData.message || '获取收藏列表失败');
-      }
-
-      // 第二步：根据商品ID列表获取商品详情
-      const goodsResponse = await fetch("/user_profile", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'type': 'get_favorites_details'
-        },
-        body: JSON.stringify({
-          goods_ids: favoritesData.favorites.map(item => item.goods_id)
-        })
-      });
-
-      if (!goodsResponse.ok) throw new Error('获取商品详情失败');
-
-      const goodsData = await goodsResponse.json();
-      if (goodsData.success) {
-        // 处理商品数据，转换图片格式
-        favorites.value = goodsData.goods.map(good => ({
-          ...good,
-          picture: good.picture ? URL.createObjectURL(base64ToBlob(good.picture)) : defaultAvatar
+      const data = await response.json();
+      console.log("data:", data);
+      if (data.success) {
+        favorites.value = data.favorites.map(favorite => ({
+          ...favorite,
+          picture: favorite.picture ? URL.createObjectURL(base64ToBlob(favorite.picture)) : defaultAvatar
         }));
-      } else {
-        throw new Error(goodsData.message || '获取商品详情失败');
+        console.log("favorites:", favorites.value);
       }
-
     } catch (error) {
         console.error('Error fetching favorites:', error);
-        ElMessage.error(error.message || '获取收藏商品失败');
-        favorites.value = []; // 出错时设置为空数组
+        ElMessage.error('获取收藏失败');
         }
       }
   
@@ -631,6 +640,9 @@
         fetchUserInfo();
         fetchUserGoods();
         fetchFavorites();
+        
+        // 监听收藏状态变化
+        window.addEventListener('collect-changed', handleCollectChange);
       });
   
       // 添加发布商品相关的响应式变量
@@ -825,6 +837,37 @@
       const showViewer = ref(false);
       const previewIndex = ref(0);
 
+      // 添加收藏商品分页相关的响应式变量
+      const favoritesCurrentPage = ref(1);
+      const favoritesPageSize = 6; // 每页显示6个收藏商品
+      
+      // 添加收藏商品分页的计算属性
+      const favoritesPagesTotal = computed(() => 
+        Math.ceil(favorites.value.length / favoritesPageSize)
+      );
+      
+      const paginatedFavorites = computed(() => {
+        const start = (favoritesCurrentPage.value - 1) * favoritesPageSize;
+        const end = start + favoritesPageSize;
+        return favorites.value.slice(start, end);
+      });
+      
+      // 处理收藏商品分页变化
+      function handleFavoritesPageChange(page) {
+        favoritesCurrentPage.value = page;
+      }
+  
+      // 添加监听收藏变化的方法
+      function handleCollectChange(event) {
+        // 重新获取收藏列表
+        fetchFavorites();
+      }
+  
+      // 在 onUnmounted 中移除事件监听
+      onUnmounted(() => {
+        window.removeEventListener('collect-changed', handleCollectChange);
+      });
+  
       return {
         userAvatar,
         userForm,
@@ -869,7 +912,14 @@
         beforeUpload,
         submitPublish,
         showViewer,
-        previewIndex
+        previewIndex,
+        base64ToBlob,
+        handleFavoritesPageChange,
+        favoritesCurrentPage,
+        favoritesPageSize,
+        favoritesPagesTotal,
+        paginatedFavorites,
+        handleCollectChange
       };
     }
   };
