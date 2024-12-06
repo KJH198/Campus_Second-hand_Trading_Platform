@@ -527,6 +527,39 @@ export default {
       }
     }
 
+    // 在 setup 函数中添加删除公告的函数
+    async function handleDeleteAnnounce(announceId) {
+      try {
+        const response = await fetch("/manager", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'delete_announce'
+          },
+          body: JSON.stringify({
+            announce_id: announceId
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+          ElMessage.success('公告删除成功');
+          // 重新获取公告列表
+          await fetchManagerInfo();
+        } else {
+          ElMessage.error('删除失败，请重试');
+        }
+      } catch (error) {
+        console.error('Error deleting announcement:', error);
+        ElMessage.error('删除失败，请稍后重试');
+      }
+    }
+
     onMounted(() => {
       document.addEventListener('click', closeDropdown);
       fetchManagerInfo();
@@ -561,7 +594,8 @@ export default {
       formatDate,
       getAccusationType,
       getAccusedTarget,
-      handleAccusation
+      handleAccusation,
+      handleDeleteAnnounce
     };
   }
 };
