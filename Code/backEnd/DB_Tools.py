@@ -276,7 +276,7 @@ def getGoodsInfo(goods_id,user_id):
     heat = goods.heat
     return {"goods_name":goods_name,"goods_price":goods_price,"goods_pictures":pictures_byte_stream_list,"seller_name":seller_name,
             "seller_picture":seller_picture,"begin_time":begin_time, "category_name":category_name,
-            "goods_description":goods_description,"goods_state":goods_state,"heat":heat,"collected":checkcollection(goods_id,user_id), "pictures_type":pictures_type}
+            "goods_description":goods_description,"goods_state":goods_state,"heat":heat,"collected":checkCollection(goods_id,user_id), "pictures_type":pictures_type}
     
 # 按关键字搜索商品
 def searchGoods(info):
@@ -311,21 +311,7 @@ def searchGoodsCategory(category):
         data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_list})
     return data
 
-########################################################################################################################
-def getAnnouncement():
-    announcements = Announcement.query.order_by(Announcement.deliver_time).all()
-    size = len(announcements)
-    data = []
-    for i in range(0,size):
-        announcement = announcements[i]
-        manger_name = announcement.manger_name
-        deliver_time = announcement.deliver_time
-        title = announcement.title
-        content = announcement.content
-        data.append({"manger_name":manger_name,"deliver_time":deliver_time,"title":title,"content":content})
-    return data
-
-##########################################################################################################################
+############################################### 商品询问管理 #################################################################
 def addConsultation(goods_id,deliver_id,comment):
     newConsultation = GoodsConsultation(
             goods_id = goods_id,
@@ -414,7 +400,7 @@ def getConsultation(goods_id):
                      "helpful":helpful,"unhelpful":unhelpful,"reply":data2})
     return data
 
-##################################################################################################################################
+############################################# 订单评价管理 ########################################################################
 def addOrderComment(goods_id,order_grade,comment):
     newOrderComment = OrderComment(
         goods_id = goods_id,
@@ -440,7 +426,7 @@ def addSecondaryOrderComment(deliver_id,order_comment_id,comment):
     db.session.add(newSecondaryOrderComment)
     db.session.commit()
     return True
-###########################################################################################################################
+############################################### 消息管理 ###################################################################
 def sendMessage(deliver_id,receiver_id,content):
     newMessage = Message(
         deliver_id = deliver_id,
@@ -472,7 +458,7 @@ def deleteMessage(user_id,message_id):
         return True
     return False
     
-################################################################################################################################
+############################################## 公告管理 ######################################################################
 def sendAnnouncement(manger_name,title,content):
     newAnnouncement = Announcement(
         manger_name = manger_name,
@@ -523,6 +509,7 @@ def dealDown(goods_id,getIt):
     db.session.commit()
     return True
 ##################################################### 收藏管理 #######################################################
+# 用户添加收藏
 def addcollection(goods_id,user_id):
     newCollection = Collection(
         user_id = user_id,
@@ -532,17 +519,28 @@ def addcollection(goods_id,user_id):
     db.session.commit()
     return True
 
+# 用户取消收藏
 def cancelCollection(goods_id,user_id):
     collection = Collection.query.filter_by(goods_id = goods_id,user_id = user_id).first()
     db.session.delete(collection)
     db.session.commit()
     return True
 
-def checkcollection(goods_id,user_id):
+# 检查用户是否收藏了某商品
+def checkCollection(goods_id,user_id):
     collection = Collection.query.filter_by(goods_id = goods_id,user_id = user_id).first()
     if collection == None:
         return False
     return True
+
+# 获取用户的收藏列表
+def getUserCollection(user_id):
+    collections = Collection.query.filter_by(user_id = user_id).all()
+    data = []
+    for collection in collections:
+        data.append(collection.goods_id)
+    return data
+
 ################################################### 举报管理 ##############################################################
 # 发起举报
 def sendAccusation(info): # content, accuser_id, accused_user_id, accused_goods_id, order_comment_id, secondary_order_comment_id, goods_consultation_id, goods_consultation_reply_id
