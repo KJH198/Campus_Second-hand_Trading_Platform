@@ -110,6 +110,10 @@ def manager():
         return jsonify({"success":dbTools.sendAnnouncement(data.get('manger_name'),data.get('title'),data.get('content'))})
     elif type == 'search_user':
         return jsonify(dbTools.getUserInfo(data.get('user_id')))
+    elif type == 'deal_accuse':
+        return jsonify({"success":dbTools.deleteAccusation(data.get('accusation_id'))})
+    elif type == 'delete_announce':
+        return jsonify({"success":dbTools.deleteAnnouncement(data.get('announce_id'))})
         
 
 def begin():

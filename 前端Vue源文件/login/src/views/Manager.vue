@@ -450,19 +450,114 @@ export default {
 
     // 获取举报类型
     function getAccusationType(accusation) {
-      if (accusation.accused_goods_id) return '商品举报';
-      if (accusation.order_comment_id) return '订单评价举报';
       if (accusation.goods_comment_id) {
-        return accusation.second_goods_comment_id ? '商品评论回复举报' : '商品评论举报';
+        return '商品评论举报';
+      }
+      if (accusation.second_goods_comment_id) {
+        return '商品评论回复举报';
+      }
+      if (accusation.second_order_comment_id) {
+        return '订单评论举报';
+      }
+      if (accusation.order_comment_id) {
+        return '订单举报';
+      }
+      if (accusation.accused_goods_id) {
+        return '商品举报';
+      }
+      if (accusation.accuser_id) {
+        return '用户举报';
       }
       return '其他举报';
     }
 
-    // 获取被举报对象
+    // 修改获取被举报对象函数
     function getAccusedTarget(accusation) {
-      if (accusation.accused_goods_id) return `商品${accusation.accused_goods_id}`;
-      if (accusation.accused_user_id) return `用户${accusation.accused_user_id}`;
+      if (accusation.goods_comment_id) {
+        return `商品评论${accusation.goods_comment_id}`;
+      }
+      if (accusation.second_goods_comment_id) {
+        return `商品评论回复${accusation.second_goods_comment_id}`;
+      }
+      if (accusation.second_order_comment_id) {
+        return `订单评论回复${accusation.second_order_comment_id}`;
+      }
+      if (accusation.order_comment_id) {
+        return `订单评论${accusation.order_comment_id}`;
+      }
+      if (accusation.accused_goods_id) {
+        return `商品${accusation.accused_goods_id}`;
+      }
+      if (accusation.accused_user_id) {
+        return `用户${accusation.accused_user_id}`;
+      }
       return '未知对象';
+    }
+
+    // 在 setup 函数中添加处理举报的函数
+    async function handleAccusation(accusation) {
+      try {
+        const response = await fetch("/manager", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'deal_accuse'
+          },
+          body: JSON.stringify({
+            accusation_id: accusation.accusation_id
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+          ElMessage.success('举报处理成功');
+          // 重新获取举报列表
+          await fetchManagerInfo();
+        } else {
+          ElMessage.error('处理失败，请重试');
+        }
+      } catch (error) {
+        console.error('Error handling accusation:', error);
+        ElMessage.error('处理失败，请稍后重试');
+      }
+    }
+
+    // 在 setup 函数中添加删除公告的函数
+    async function handleDeleteAnnounce(announceId) {
+      try {
+        const response = await fetch("/manager", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'delete_announce'
+          },
+          body: JSON.stringify({
+            announce_id: announceId
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+          ElMessage.success('公告删除成功');
+          // 重新获取公告列表
+          await fetchManagerInfo();
+        } else {
+          ElMessage.error('删除失败，请重试');
+        }
+      } catch (error) {
+        console.error('Error deleting announcement:', error);
+        ElMessage.error('删除失败，请稍后重试');
+      }
     }
 
     onMounted(() => {
@@ -498,7 +593,9 @@ export default {
       accusations,
       formatDate,
       getAccusationType,
-      getAccusedTarget
+      getAccusedTarget,
+      handleAccusation,
+      handleDeleteAnnounce
     };
   }
 };
