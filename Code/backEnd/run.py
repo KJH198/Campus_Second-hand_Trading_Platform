@@ -36,7 +36,7 @@ def home():
     elif type == 'category_search':
         return jsonify({"goods":dbTools.searchGoodsCategory(data.get("category_name"))})
     elif type == 'announcement':
-        return jsonify({"announcements":dbTools.getAnnouncement()})
+        return jsonify({"announcements":dbTools.getAllAnnouncement()})
     elif type == 'user_info':
         return jsonify({"user_info":dbTools.getUserInfo(data.get("user_id"))})
 
