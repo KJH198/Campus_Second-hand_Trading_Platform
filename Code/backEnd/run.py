@@ -97,6 +97,18 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@app.route('/manager', methods=['POST'])
+def manager():
+    type = request.headers.get('type')
+    data = request.get_json()
+    if type == 'getinfo':
+        return jsonify({"announces":dbTools.getMangerAnnouncement(data.get('manager_name')),
+                        "accusations":dbTools.getAccusations()})
+    elif type == 'create_announce':
+        return jsonify({"success":dbTools.sendAnnouncement(data.get('manger_name'),data.get('title'),data.get('content'))})
+    elif type == 'search_user':
+        return jsonify(dbTools.getUserInfo(data.get('user_id')))
+        
 
 def begin():
     DB_Initiator.init()
