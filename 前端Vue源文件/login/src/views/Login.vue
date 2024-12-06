@@ -12,7 +12,7 @@
             name="phoneNumber"
             :class="{ 'error': inputErrors.phoneNumber }"
           />
-          <span class="label">{{ isManager ? '管理员账户' : '电话号码' }}</span>
+          <span class="label">{{ isManager ? '管理员账号' : '电话号码' }}</span>
         </div>
         <div class="inputf">
           <input 
@@ -67,6 +67,7 @@
 <script>
 import {onMounted, ref} from "vue";
 import { useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
 
 export default {
   name: "Login",
@@ -87,74 +88,83 @@ export default {
     function handleUserTypeChange(event) {
       isManager.value = event.target.checked;
     }
-    const handlelog =  async  () => {
-      const inputValue = document.querySelector('input[name="phoneNumber"]').value;
-      const password = document.querySelector('input[name="password"]').value;
-
-      // 验证输入
-      inputErrors.value.phoneNumber = !inputValue;
-      inputErrors.value.password = !password;
-
-      // 如果有空值，不继续提交
-      if (!inputValue || !password) {
-        return;
-      }
-
+    async function handleLogin() {
       try {
-        const response = await fetch("/", {
+        const inputValue = document.querySelector('input[name="phoneNumber"]').value;
+        const password = document.querySelector('input[name="password"]').value;
+
+        // 验证输入
+        inputErrors.value.phoneNumber = !inputValue;
+        inputErrors.value.password = !password;
+
+        // 如果有空值，不继续提交
+        if (!inputValue || !password) {
+          return;
+        }
+
+        // 构造请求体
+        const requestBody = {
+          password: password,
+          isManager: isManager.value
+        };
+
+        // 根据是否是管理员添加不同的字段
+        if (isManager.value) {
+          requestBody.manager_name = inputValue;
+        } else {
+          requestBody.phone_number = inputValue;
+        }
+
+        const response = await fetch('/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'type': 'login'
           },
-          body: JSON.stringify(
-            isManager.value ? 
-            {
-              manager_name: inputValue,  // 管理员使用账户名
-              password,
-              isManager: isManager.value
-            } : 
-            {
-              phone_number: inputValue,  // 普通用户使用手机号
-              password,
-              isManager: isManager.value
-            }
-          ),
+          body: JSON.stringify(requestBody)
         });
-        const data = await response.json();
-        const success = data.success;
-        console.log(data.user_id);
-        if (success) {
-          alert("登录成功")
 
-          if(isManager.value){
-            await router.push({
-              path: '/info_page',
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+          ElMessage.success('登录成功！');
+          
+          if (isManager.value) {
+            // 管理员登录，只传入管理员名字
+            router.push({
+              path: '/manager',
               query: {
-                manager_name: inputValue,
-                isManager: isManager.value,
-                user_id:data.user_id
+                admin_name: inputValue
               }
             });
           } else {
-            await router.push({
+            // 普通用户登录，传入用户ID
+            router.push({
               path: '/home',
               query: {
-                phone_number: inputValue,
-                isManager: isManager.value,
-                user_id:data.user_id
+                user_id: data.user_id
               }
             });
-
           }
-
         } else {
-          alert("登录失败")
+          // 处理登录失败的不同情况
+          if (data.info === 'banned') {
+            ElMessage.error('该账号已被封禁！');
+          } else if (data.info === 'wrong') {
+            ElMessage.error(isManager.value ? '管理员账号或密码不正确' : '手机号或密码不正确');
+          } else {
+            ElMessage.error('登录失败，请重试');
+          }
         }
-        } catch (error) {
-          console.error('Error during log:', error);
-        }
+      } catch (error) {
+        console.error('Error:', error);
+        ElMessage.error('登录失败，请稍后重试');
       }
+    }
     const handleregister = async ()=>  {
       const user_name = document.querySelector('input[name="username"]').value;
       const password = document.querySelector('input[name="loginpassword"]').value;
@@ -196,7 +206,7 @@ export default {
       if (signinButton) {
         signinButton.addEventListener('click', (event) => {
           event.preventDefault();
-          handlelog();
+          handleLogin();
         });
       }
     });
@@ -204,7 +214,7 @@ export default {
     return{
       active,
       cardbutton,
-      handlelog,
+      handleLogin,
       handleregister,
       togglecard,
       handleUserTypeChange,

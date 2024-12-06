@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import Login from '../views/Login.vue'
 import GoodDetails from '../views/GoodDetails.vue'
 import UserProfile from '../views/UserProfile.vue'
+import Manager from '../views/Manager.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -26,8 +27,19 @@ const router = createRouter({
       path: '/profile',
       name: 'UserProfile',
       component: UserProfile
+    },
+    {
+      path: '/manager',
+      name: 'manager',
+      component: Manager
     }
   ]
+})
+
+router.beforeEach((to, from, next) => {
+  console.log('Current routes:', router.getRoutes().map(r => r.path))
+  console.log('Navigating to:', to.path)
+  next()
 })
 
 export default router
