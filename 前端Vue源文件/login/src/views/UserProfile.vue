@@ -101,14 +101,16 @@
             </div>
           </div>
         </div>
-      </main>
-
-        <!-- 收藏商品展示区域 -->
-    <div class="favorites-section">
-      <h2 class="section-title">我的收藏</h2>
+             <!-- 添加收藏商品显示组件 -->
+    <div class="favorites-container">
+      <h2>我的收藏</h2>
       <div class="favorites-grid">
+        <div v-if="!favorites || favorites.length === 0" class="no-favorites">
+          暂无收藏商品
+        </div>
         <div 
-          v-for="favorite in favorites" 
+          v-else
+          v-for="favorite in paginatedFavorites" 
           :key="favorite.goods_id" 
           class="favorite-card"
           @click="goToGoodsDetails(favorite)"
@@ -119,10 +121,32 @@
           <div class="favorite-info">
             <h3 class="favorite-name">{{ favorite.goods_name }}</h3>
             <p class="favorite-price">¥{{ favorite.goods_price }}</p>
-            </div>
           </div>
         </div>
-      </div>    
+      </div>
+      
+      <!-- 收藏商品分页控件 -->
+      <div class="pagination" v-if="favorites.length > favoritesPageSize">
+        <button 
+          class="page-button"
+          :disabled="favoritesCurrentPage === 1"
+          @click="handleFavoritesPageChange(favoritesCurrentPage - 1)"
+        >
+          上一页
+        </button>
+        <span class="page-info">
+          {{ favoritesCurrentPage }} / {{ favoritesPagesTotal }}
+        </span>
+        <button 
+          class="page-button"
+          :disabled="favoritesCurrentPage === favoritesPagesTotal"
+          @click="handleFavoritesPageChange(favoritesCurrentPage + 1)"
+        >
+          下一页
+        </button>
+        </div>
+      </div>
+      </main>
   
       <!-- 系统公告弹窗 -->
       <el-dialog
@@ -551,10 +575,11 @@
       // 获取收藏商品 TODO：后端
     async function fetchFavorites() {
       try {
-        const response = await fetch("/user_favorites", {
+        const response = await fetch("/user_profile", {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'type': 'get_favorites'
           },
           body: JSON.stringify({
             user_id: route.query.user_id
@@ -696,10 +721,8 @@
       }
 
       function handlePreview(file) {
-        previewUrl.value = file.url;
-        nextTick(() => {
-          imagePreview.value.clickHandler();
-        });
+        previewIndex.value = fileList.value.findIndex(f => f.uid === file.uid);
+        showViewer.value = true;
       }
 
       function beforeUpload(file) {
@@ -837,6 +860,13 @@
   </script>
   
   <style scoped>
+  
+  .right-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
   .profile-view {
     min-height: 100vh;
     background-color: #f5f5f5;
@@ -870,6 +900,7 @@
     margin: 10px auto; /* 减小顶部边距 */
     padding: 0 20px;
     min-height: calc(100vh - 56px); /* 减去header高度 */
+    gap: 40px;
   }
   
   .profile-container {
@@ -1063,18 +1094,22 @@
     margin-top: 20px;
   }
 
-  .favorites-section {
+ 
+
+.favorites-container {
+  width: 100%;
   background: white;
   border-radius: 8px;
   padding: 20px;
+  margin-bottom: 40px;  /* 添加底部间距，避免贴近页面底部 */
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  margin-top: 20px;
 }
 
 .favorites-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 20px;
+  margin-top: 20px;
 }
 
 .favorite-card {
@@ -1112,13 +1147,56 @@
   color: #333;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .favorite-price {
-  margin: 10px 0;
+  margin: 10px 0 0;
   color: #ff5000;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: bold;
+}
+
+.no-favorites {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 16px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.page-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background-color: #ff5000;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.page-button:hover:not(:disabled) {
+  background-color: #ff6a00;
+}
+
+.page-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 16px;
+  color: #666;
 }
   </style>

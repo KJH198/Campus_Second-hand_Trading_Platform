@@ -86,6 +86,9 @@ def user_profile():
         return jsonify({"success":dbTools.reDefineUser(info)})
     elif type == 'update_avatar':
         pass
+    elif type == 'get_favorites':
+        
+        return jsonify({"success":True})
     
 @app.route('/goods_picture_show', methods=['POST'])
 def goods_picture_show():
