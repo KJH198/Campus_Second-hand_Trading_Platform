@@ -87,9 +87,8 @@ def user_profile():
     elif type == 'update_avatar':
         pass
     elif type == 'get_favorites':
+        return jsonify({"success":True, "favorites":dbTools.getUserCollection(data.get('user_id'))})
         
-        return jsonify({"success":True})
-    
 @app.route('/goods_picture_show', methods=['POST'])
 def goods_picture_show():
     return jsonify({'success': True,'message': '上传成功','url':dbTools.transb264(request.files.get('file'))})

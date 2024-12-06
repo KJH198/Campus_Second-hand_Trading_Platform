@@ -573,41 +573,57 @@
       }
 
       // 获取收藏商品 TODO：后端
-    async function fetchFavorites() {
-      try {
-        const response = await fetch("/user_profile", {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'type': 'get_favorites'
-          },
-          body: JSON.stringify({
-            user_id: route.query.user_id
-          })
-        });
+      async function fetchFavorites() {
+    try {
+      // 第一步：获取收藏的商品ID列表
+      const favoritesResponse = await fetch("/user_profile", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'type': 'get_favorites'
+        },
+        body: JSON.stringify({
+          user_id: route.query.user_id
+        })
+      });
 
-        if (!response.ok) throw new Error('获取收藏失败');
+      if (!favoritesResponse.ok) throw new Error('获取收藏列表失败');
 
-        const data = await response.json();
-        if (data.success) {
-          favorites.value = data.favorites.map(favorite => ({
-            ...favorite,
-            picture: favorite.picture ? URL.createObjectURL(base64ToBlob(favorite.picture)) : defaultAvatar
-          }));
-        }
-      } catch (error) {
-          console.error('Error fetching favorites:', error);
-          ElMessage.error('获取收藏失败');
-        }
+      const favoritesData = await favoritesResponse.json();
+      if (!favoritesData.success) {
+        throw new Error(favoritesData.message || '获取收藏列表失败');
       }
-  
-      function base64ToBlob(base64) {
-        const byteCharacters = atob(base64);
-        const byteArrays = [];
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteArrays.push(byteCharacters.charCodeAt(i));
+
+      // 第二步：根据商品ID列表获取商品详情
+      const goodsResponse = await fetch("/user_profile", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'type': 'get_favorites_details'
+        },
+        body: JSON.stringify({
+          goods_ids: favoritesData.favorites.map(item => item.goods_id)
+        })
+      });
+
+      if (!goodsResponse.ok) throw new Error('获取商品详情失败');
+
+      const goodsData = await goodsResponse.json();
+      if (goodsData.success) {
+        // 处理商品数据，转换图片格式
+        favorites.value = goodsData.goods.map(good => ({
+          ...good,
+          picture: good.picture ? URL.createObjectURL(base64ToBlob(good.picture)) : defaultAvatar
+        }));
+      } else {
+        throw new Error(goodsData.message || '获取商品详情失败');
+      }
+
+    } catch (error) {
+        console.error('Error fetching favorites:', error);
+        ElMessage.error(error.message || '获取收藏商品失败');
+        favorites.value = []; // 出错时设置为空数组
         }
-        return new Blob([new Uint8Array(byteArrays)], { type: 'image/jpeg' });
       }
   
       // 生命周期钩子
