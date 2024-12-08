@@ -5,7 +5,7 @@ import base64
 import random
 
 # 自己修改为本地存储图片文件夹的绝对路径 + \\
-picturePath = 'E:\\Junior_Autumn\\Database\\Final_Project\\Campus_Second-hand_Trading_Platform\\Code\\backEnd\\uploads\\'
+picturePath = "C:\\Users\\kjh15\\Desktop\\Project\\picture\\"
 Default_url = 'default.jpg'
 
 ############################################## 用户管理 ################################################################
@@ -544,7 +544,7 @@ def sendAnnouncement(manger_name,title,content):
 
 def getAllAnnouncement():
     announcements = Announcement.query.all()
-    data = [{"announce_id":announcement.announcement_id,"manger_name":announcement.manger_name,"deliver_time":announcement.deliver_time,"title":announcement.title,"content":announcement.content} for announcement in announcements]
+    data = [{"manger_name":announcement.manger_name,"deliver_time":announcement.deliver_time,"title":announcement.title,"content":announcement.content} for announcement in announcements]
     return data
 
 def deleteAnnouncement(announcement_id):
@@ -552,7 +552,6 @@ def deleteAnnouncement(announcement_id):
     db.session.delete(announcement)
     db.session.commit()
     return True
-
 ##################################################### 订单管理 ########################################################
 def buyGoods(goods_id,buyer_id):
     newOrder = Order(
