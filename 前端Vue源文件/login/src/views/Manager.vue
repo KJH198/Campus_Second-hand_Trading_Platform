@@ -615,7 +615,7 @@ export default {
           // 更新本地用户状态
           userInfo.value.isbanned = true;
         } else {
-          ElMessage.error('封禁失败，请重试');
+          ElMessage.error('封禁失败，请重��');
         }
       } catch (error) {
         console.error('Error banning user:', error);
@@ -623,7 +623,7 @@ export default {
       }
     }
 
-    // 在 setup 中添加解除封禁函数
+    // 修改解除封禁函数
     async function handleUnban(userId) {
       try {
         const response = await fetch("/manager", {
@@ -641,8 +641,8 @@ export default {
         
         if (data.success) {
           ElMessage.success('解除封禁成功');
-          // 重新获取用户信息以更新状态
-          await searchUser();
+          // 直接更新本地用户状态
+          userInfo.value.isbanned = false;
         } else {
           ElMessage.error('解除封禁失败');
         }
