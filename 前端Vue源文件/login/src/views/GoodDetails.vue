@@ -592,7 +592,7 @@ export default {
     }
 
     // 获取公告
-    async function fetchAnnouncements(){
+    async function gtfetchAnnouncements(){
       try {
         const response = await fetch("/goods_detail", {
           method: "GET",
@@ -1617,7 +1617,7 @@ export default {
       contactUs,
       announcements,
       showAnnouncementDialog,
-      fetchAnnouncements,
+      gtfetchAnnouncements,
       productId,
       goodsPictures,
       currentImageIndex,

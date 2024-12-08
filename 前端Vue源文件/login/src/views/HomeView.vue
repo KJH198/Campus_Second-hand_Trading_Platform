@@ -239,7 +239,7 @@ export default {
         });
       } catch (error) {
         console.error("获取用户信息失败:", error);
-        ElMessage.error('获取用户信��失败');
+        ElMessage.error('获取用户信息失败');
       }
     }
 
@@ -344,7 +344,7 @@ export default {
     }
 
     // 获取公告函数
-    async function fetchAnnouncements() {
+    async function fetchAnnouncements(event) {
       try {
         const response = await fetch("/home", {
           method: "GET",
@@ -360,34 +360,38 @@ export default {
 
         const data = await response.json();
         
-        // 检查是否有新公告
-        const hasNew = data.announcements.some(announcement => {
-          return new Date(announcement.deliver_time) > new Date(lastCheckTime.value);
-        });
-
-        // 更新新公告标志
-        hasNewAnnouncement.value = hasNew;
+        // 如果是点击事件触发的，更新最后检查时间并清除新公告标记
+        if (event?.type === 'click') {
+          lastCheckTime.value = new Date().toISOString();
+          hasNewAnnouncement.value = false;
+          showAnnouncementDialog.value = true;
+        } else {
+          // 如果是轮询触发的，检查是否有新公告
+          const hasNew = data.announcements.some(announcement => {
+            return new Date(announcement.deliver_time) > new Date(lastCheckTime.value);
+          });
+          hasNewAnnouncement.value = hasNew;
+        }
         
-        // 更新最后检查时间
-        lastCheckTime.value = new Date().toISOString();
-        
-        // 更���公告列表
+        // 更新公告列表
         announcements.value = data.announcements;
 
       } catch (error) {
         console.error("获取公告失败", error);
         ElMessage.error('获取公告失败，请重试');
-        // 清空公告列表
         announcements.value = [];
-      } finally {
-        // 无论成功失败都显示对话框
-        showAnnouncementDialog.value = true;
+        
+        if (event?.type === 'click') {
+          showAnnouncementDialog.value = true;
+        }
       }
     }
 
     // 开始轮询
     function startPolling() {
-      pollTimer = setInterval(fetchAnnouncements, 10000); // 每10秒轮询一次
+      pollTimer = setInterval(() => {
+        fetchAnnouncements(); // 不传入事件参数，表示是轮询触发的
+      }, 10000); // 每10秒轮询一次
     }
 
     // 停止轮询
