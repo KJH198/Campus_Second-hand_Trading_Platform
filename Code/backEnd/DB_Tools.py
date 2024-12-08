@@ -52,10 +52,11 @@ def urlGenerator(binaryPicture,pictureName):
 # 删除用户图片
 def deleteUserPicture(user_id):
     user = User.query.filter_by(user_id = user_id).first()
-    full_url = picturePath + user.picture_url
-    os.remove(full_url)
-    user.picture_url = Default_url
-    db.session.commit()
+    if (user.picture_url != Default_url):
+        full_url = picturePath + user.picture_url
+        os.remove(full_url)
+        user.picture_url = Default_url
+        db.session.commit()
     return True
 
 # 根据文件扩展名返回对应的图片类型
