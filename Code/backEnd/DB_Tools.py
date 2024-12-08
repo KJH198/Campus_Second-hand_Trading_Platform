@@ -608,13 +608,14 @@ def getOrderComment(goods_id):
     orderComment = OrderComment.query.filter_by(goods_id = goods_id).all()
     data = []
     for item in orderComment:
+        order_comment_id = item.order_comment_id
         order_grade = item.order_grade
         comment = item.comment
         comment_time = item.comment_time
         helpful = item.helpful
         unhelpful = item.unhelpful
-        data.append({"order_grade":order_grade,"comment":comment,"comment_time":comment_time,
-                     "helpful":helpful,"unhelpful":unhelpful,})
+        data.append({"order_comment_id":order_comment_id,"order_grade":order_grade,"comment":comment,
+                     "comment_time":comment_time,"helpful":helpful,"unhelpful":unhelpful,})
     return data
 
 # 添加二级订单评价
@@ -636,13 +637,14 @@ def getSecondaryOrderComment(order_comment_id):
     secondaryOrderComment = SecondaryOrderComment.query.filter_by(order_comment_id = order_comment_id).all()
     data = []
     for item in secondaryOrderComment:
+        secondary_order_comment_id = item.secondary_order_comment_id
         deliver_id = item.deliver_id
         comment = item.comment
         comment_time = item.comment_time
         helpful = item.helpful
         unhelpful = item.unhelpful
-        data.append({"deliver_id":deliver_id,"comment":comment,"comment_time":comment_time,
-                     "helpful":helpful,"unhelpful":unhelpful,})
+        data.append({"secondary_order_comment_id":secondary_order_comment_id,"deliver_id":deliver_id,
+                     "comment":comment,"comment_time":comment_time,"helpful":helpful,"unhelpful":unhelpful,})
     return data
 
 # 赞、踩逻辑
