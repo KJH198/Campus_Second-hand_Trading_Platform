@@ -470,7 +470,7 @@ export default {
         return '商品评论举报';
       }
       if (accusation.second_goods_comment_id) {
-        return '商品评论回复举报';
+        return '商品评论���复举报';
       }
       if (accusation.second_order_comment_id) {
         return '订单评论举报';
@@ -616,6 +616,35 @@ export default {
       }
     }
 
+    // 在 setup 中添加解除封禁函数
+    async function handleUnban(userId) {
+      try {
+        const response = await fetch("/manager", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'deban'
+          },
+          body: JSON.stringify({
+            user_id: userId
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          ElMessage.success('解除封禁成功');
+          // 重新获取用户信息以更新状态
+          await searchUser();
+        } else {
+          ElMessage.error('解除封禁失败');
+        }
+      } catch (error) {
+        console.error('解除封禁请求失败:', error);
+        ElMessage.error('解除封禁失败，请重试');
+      }
+    }
+
     onMounted(() => {
       document.addEventListener('click', closeDropdown);
       fetchManagerInfo();
@@ -654,6 +683,7 @@ export default {
       handleDeleteAnnounce,
       viewUserProfile,
       handleBanUser,
+      handleUnban,
     };
   }
 };
@@ -952,5 +982,16 @@ export default {
 .admin-greeting:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: translateY(-1px);
+}
+
+.user-status {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.user-status .el-button {
+  font-size: 14px;
+  padding: 6px 12px;
 }
 </style> 
