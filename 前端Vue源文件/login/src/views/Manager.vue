@@ -177,11 +177,18 @@
                 </div>
                 <div class="ban-action">
                   <el-button 
-                    :type="userInfo.isbanned ? 'info' : 'danger'"
-                    :disabled="userInfo.isbanned"
+                    v-if="!userInfo.isbanned"
+                    type="danger"
                     @click="handleBanUser"
                   >
-                    {{ userInfo.isbanned ? '已封禁' : '封禁' }}
+                    封禁
+                  </el-button>
+                  <el-button 
+                    v-else
+                    type="success"
+                    @click="handleUnban(searchUserId)"
+                  >
+                    解除封禁
                   </el-button>
                 </div>
               </div>
@@ -470,7 +477,7 @@ export default {
         return '商品评论举报';
       }
       if (accusation.second_goods_comment_id) {
-        return '商品评论���复举报';
+        return '商品评论复举报';
       }
       if (accusation.second_order_comment_id) {
         return '订单评论举报';
