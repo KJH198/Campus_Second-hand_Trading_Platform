@@ -1,5 +1,5 @@
 <script>
-import { onMounted, ref, computed } from "vue";
+import { onMounted, ref, computed, onUnmounted } from "vue";
 import { useRoute, useRouter } from 'vue-router';
 import defaultAvatar from '@/assets/tubiao.png'; // 导入默认头像图片
 import lanqiuImage from '@/assets/lanqiu.png';  // 导入篮球图片
@@ -35,6 +35,10 @@ export default {
     const currentPage = ref(1);
     const pageSize = 16;  // 每页显示16个商品
     const noResultsMessage = ref('');
+    const announcements = ref([]);
+    const hasNewAnnouncement = ref(false);
+    const lastCheckTime = ref(new Date().toISOString());
+    let pollTimer = null;
 
     function base64ToBlob(base64) {
       var byteCharacters = atob(base64);
@@ -338,14 +342,10 @@ export default {
       console.log("联系我们");
     }
 
-    // 添加新的响应式变量
-    const announcements = ref([]);
-    const showAnnouncementDialog = ref(false);
-
-    // 添加获取公告的函数
+    // 获取公告函数
     async function fetchAnnouncements() {
       try {
-        const response = await fetch("/home", {
+        const response = await fetch("/goods_detail", {
           method: "GET",
           headers: {
             'Content-Type': 'application/json',
@@ -356,16 +356,38 @@ export default {
         if (!response.ok) {
           throw new Error('Failed to fetch announcements');
         }
+
         const data = await response.json();
+        
+        // 检查是否有新公告
+        const hasNew = data.announcements.some(announcement => {
+          return new Date(announcement.deliver_time) > new Date(lastCheckTime.value);
+        });
+
+        // 更新新公告标志
+        hasNewAnnouncement.value = hasNew;
+        
+        // 更新最后检查时间
+        lastCheckTime.value = new Date().toISOString();
+        
+        // 更新公告列表
         announcements.value = data.announcements;
-        showAnnouncementDialog.value = true;
+
       } catch (error) {
         console.error("获取公告失败", error);
-        // 修改默认公告内容
-        announcements.value = [
-          { id: 1, title: "系统提示", content: "暂时没有新的公告", date: new Date().toLocaleDateString() }
-        ];
-        showAnnouncementDialog.value = true;
+      }
+    }
+
+    // 开始轮询
+    function startPolling() {
+      pollTimer = setInterval(fetchAnnouncements, 10000); // 每10秒轮询一次
+    }
+
+    // 停止轮询
+    function stopPolling() {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
       }
     }
 
@@ -373,6 +395,12 @@ export default {
       fetchProducts();
       fetchUserAvatar();
       document.addEventListener('click', closeDropdown);
+      fetchAnnouncements(); // 立即获取一次
+      startPolling(); // 开始轮询
+    });
+
+    onUnmounted(() => {
+      stopPolling();
     });
 
     return {
@@ -393,7 +421,7 @@ export default {
       handlePageChange,
       contactUs,  // 添加新函数
       announcements,
-      showAnnouncementDialog,
+      hasNewAnnouncement,
       fetchAnnouncements,
       noResultsMessage,
     };
@@ -424,6 +452,7 @@ export default {
         <div class="user-section">
           <button class="announcement-btn" @click="fetchAnnouncements">
             <el-icon><Bell /></el-icon>
+            <span v-if="hasNewAnnouncement" class="new-notice-dot"></span>
           </button>
           
           <div class="user-profile">
@@ -786,6 +815,7 @@ export default {
   transition: all 0.3s;
   width: 36px;
   height: 36px;
+  position: relative;
 }
 
 .announcement-btn:hover {
@@ -834,5 +864,16 @@ export default {
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.new-notice-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background-color: #ff4444;
+  border-radius: 50%;
+  border: 2px solid #fff;
 }
 </style>

@@ -155,7 +155,10 @@
           <div v-if="userInfo" class="user-info-card">
             <el-card>
               <div class="user-info-content">
-                <div class="user-avatar">
+                <div class="user-avatar" 
+                     @click="viewUserProfile" 
+                     style="cursor: pointer;" 
+                     title="点击查看用户主页">
                   <img :src="userAvatarUrl" alt="用户头像">
                 </div>
                 <div class="user-details">
@@ -176,6 +179,7 @@
                   <el-button 
                     :type="userInfo.isbanned ? 'info' : 'danger'"
                     :disabled="userInfo.isbanned"
+                    @click="handleBanUser"
                   >
                     {{ userInfo.isbanned ? '已封禁' : '封禁' }}
                   </el-button>
@@ -237,7 +241,7 @@ import {
   Promotion, 
   Warning, 
   UserFilled,
-  Plus,  // 添加 Plus 图标
+  Plus,  // 加 Plus 图标
   Search,  // 添加 Search 图标
   Delete  // 添加 Delete 图标
 } from '@element-plus/icons-vue';
@@ -363,7 +367,7 @@ export default {
       }
     }
 
-    // 搜索用户函数
+    // 修改搜索用户函数
     async function searchUser() {
       if (!searchUserId.value) {
         ElMessage.warning('请输入用户ID');
@@ -388,17 +392,29 @@ export default {
 
         const data = await response.json();
         
-        // 处理用户头像
+        // 直接使用返回的据，因为格式已经匹配
         if (data.picture) {
           const blob = base64ToBlob(data.picture);
           userAvatarUrl.value = URL.createObjectURL(blob);
+        } else {
+          userAvatarUrl.value = defaultAvatar;
         }
         
-        userInfo.value = data;
+        // 更新用户信息，完全匹配接口返回格式
+        userInfo.value = {
+          phone_number: data.phone_number,
+          user_name: data.user_name,
+          other_information: data.other_information,
+          isbanned: data.isbanned
+        };
+        
+        ElMessage.success('查找用户成功');
         
       } catch (error) {
         console.error('Error searching user:', error);
         ElMessage.error('搜索用户失败，请重试');
+        userInfo.value = null;
+        userAvatarUrl.value = defaultAvatar;
       }
     }
 
@@ -560,6 +576,46 @@ export default {
       }
     }
 
+    // 添加查看用户主页函数
+    function viewUserProfile() {
+      // 使用window.open在新标签页打开用户主页
+      const routeUrl = `/profile?user_id=${searchUserId.value}&current_user_id=${route.query.admin_id}&viewing_own_profile=false`;
+      window.open(routeUrl, '_blank');
+    }
+
+    // 在setup中添加处理函数
+    async function handleBanUser() {
+      try {
+        const response = await fetch("/manager", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'ban'
+          },
+          body: JSON.stringify({
+            user_id: parseInt(searchUserId.value)
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+          ElMessage.success('用户封禁成功');
+          // 更新本地用户状态
+          userInfo.value.isbanned = true;
+        } else {
+          ElMessage.error('封禁失败，请重试');
+        }
+      } catch (error) {
+        console.error('Error banning user:', error);
+        ElMessage.error('封禁操作失败，请稍后重试');
+      }
+    }
+
     onMounted(() => {
       document.addEventListener('click', closeDropdown);
       fetchManagerInfo();
@@ -595,7 +651,9 @@ export default {
       getAccusationType,
       getAccusedTarget,
       handleAccusation,
-      handleDeleteAnnounce
+      handleDeleteAnnounce,
+      viewUserProfile,
+      handleBanUser,
     };
   }
 };
