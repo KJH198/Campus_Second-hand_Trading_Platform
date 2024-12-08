@@ -1,5 +1,5 @@
 <script>
-import { onMounted, ref, computed } from "vue";
+import { onMounted, ref, computed, onUnmounted } from "vue";
 import { useRoute, useRouter } from 'vue-router';
 import defaultAvatar from '@/assets/tubiao.png'; // 导入默认头像图片
 import lanqiuImage from '@/assets/lanqiu.png';  // 导入篮球图片
@@ -9,7 +9,7 @@ import yiwuImage from '@/assets/yifu.png';
 import qitaImage from '@/assets/qita.png';
 import { Search, Bell } from '@element-plus/icons-vue'
 import { ElIcon } from 'element-plus'
-import { ElDialog } from 'element-plus'
+import { ElDialog, ElMessage } from 'element-plus'
 
 export default {
   name: "HomeView",
@@ -35,6 +35,12 @@ export default {
     const currentPage = ref(1);
     const pageSize = 16;  // 每页显示16个商品
     const noResultsMessage = ref('');
+    const announcements = ref([]);
+    const hasNewAnnouncement = ref(false);
+    const lastCheckTime = ref(new Date().toISOString());
+    let pollTimer = null;
+    const showAnnouncementDialog = ref(false);
+    const lastAnnouncementTime = ref(null);
 
     function base64ToBlob(base64) {
       var byteCharacters = atob(base64);
@@ -67,7 +73,7 @@ export default {
     };
 
     /**
-     * 请求商品接口，一上来就执行，希望获得随机商品数组。
+     * 请求商品接口上来就执行，希望获得随机商品数组。
      * data{
      * pro
      * }
@@ -175,7 +181,7 @@ export default {
         // 检查返回的商品数组是否为空
         if (!data.goods || data.goods.length === 0) {
           filteredProducts.value = [];
-          noResultsMessage.value = '抱歉，找不到符合您描述要求的商品';
+          noResultsMessage.value = '抱歉找不到符合您描述要求的商品';
         } else {
           products.value = data.goods;
           filteredProducts.value = data.goods;
@@ -305,7 +311,7 @@ export default {
 
     // 修改跳转商品页函数
     function goToDetails(product) {
-      console.log('跳转商品详情，商品数据：', product);
+      console.log('跳转商品详情，商品数：', product);
       router.push({
         name: 'GoodDetails',  // 对应 router/index.js 中的路由名称
         params: { 
@@ -338,12 +344,8 @@ export default {
       console.log("联系我们");
     }
 
-    // 添加新的响应式变量
-    const announcements = ref([]);
-    const showAnnouncementDialog = ref(false);
-
-    // 添加获取公告的函数
-    async function fetchAnnouncements() {
+    // 获取公告函数
+    async function fetchAnnouncements(event) {
       try {
         const response = await fetch("/home", {
           method: "GET",
@@ -356,23 +358,73 @@ export default {
         if (!response.ok) {
           throw new Error('Failed to fetch announcements');
         }
+
         const data = await response.json();
+        console.log("后端返回的公告数据:", data);
         announcements.value = data.announcements;
-        showAnnouncementDialog.value = true;
+        
+        // 如果有公告，找出最新的公告时间
+        if (announcements.value && announcements.value.length > 0) {
+          const latestTime = Math.max(...announcements.value.map(a => new Date(a.date).getTime()));
+          
+          if (event?.type === 'click') {
+            lastAnnouncementTime.value = latestTime;
+            hasNewAnnouncement.value = false;
+            showAnnouncementDialog.value = true;
+          } else {
+            hasNewAnnouncement.value = !lastAnnouncementTime.value || latestTime > lastAnnouncementTime.value;
+          }
+          console.log("用户最后查看的公告时间为:"+lastAnnouncementTime.value +"当前公告最新时间为"+latestTime);
+        }
+
       } catch (error) {
         console.error("获取公告失败", error);
-        // 修改默认公告内容
-        announcements.value = [
-          { id: 1, title: "系统提示", content: "暂时没有新的公告", date: new Date().toLocaleDateString() }
-        ];
-        showAnnouncementDialog.value = true;
+        ElMessage.error('获取公告失败，请重试');
+        announcements.value = [];
+        
+        if (event?.type === 'click') {
+          showAnnouncementDialog.value = true;
+        }
       }
+    }
+
+    // 开始轮询
+    function startPolling() {
+      pollTimer = setInterval(() => {
+        fetchAnnouncements(); // 不传入事件参，表示是轮询触发的
+      }, 10000); // 每10秒轮询一次
+    }
+
+    // 停止轮询
+    function stopPolling() {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    }
+
+    // 在 setup 中添加 formatDate 函数
+    function formatDate(date) {
+      if (!date) return '';
+      return new Date(date).toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
     }
 
     onMounted(() => {
       fetchProducts();
       fetchUserAvatar();
       document.addEventListener('click', closeDropdown);
+      fetchAnnouncements(); // 立即获取一次
+      startPolling(); // 开始轮询
+    });
+
+    onUnmounted(() => {
+      stopPolling();
     });
 
     return {
@@ -393,9 +445,11 @@ export default {
       handlePageChange,
       contactUs,  // 添加新函数
       announcements,
-      showAnnouncementDialog,
+      hasNewAnnouncement,
       fetchAnnouncements,
       noResultsMessage,
+      showAnnouncementDialog,
+      formatDate,  // 添加这一行
     };
   },
 };
@@ -424,6 +478,7 @@ export default {
         <div class="user-section">
           <button class="announcement-btn" @click="fetchAnnouncements">
             <el-icon><Bell /></el-icon>
+            <span v-if="hasNewAnnouncement" class="new-notice-dot"></span>
           </button>
           
           <div class="user-profile">
@@ -438,7 +493,6 @@ export default {
               class="dropdown-menu"
             >
               <button @click="viewProfile">个人信息</button>
-              <button @click="viewNotifications">我的通知</button>
               <button @click="viewMessages">我的消息</button>
               <button @click="contactUs">联系我们</button>
             </div>
@@ -503,13 +557,18 @@ export default {
       width="50%"
     >
       <div class="announcements-container">
-        <div v-for="announcement in announcements" 
-             :key="announcement.id" 
-             class="announcement-item"
-        >
-          <h3>{{ announcement.title }}</h3>
-          <p>{{ announcement.content }}</p>
-          <span class="announcement-date">{{ announcement.date }}</span>
+        <div v-if="announcements && announcements.length > 0">
+          <div v-for="announcement in announcements" 
+               :key="announcement.id" 
+               class="announcement-item"
+          >
+            <h3>{{ announcement.title }}</h3>
+            <p>{{ announcement.content }}</p>
+            <span class="announcement-date">{{ formatDate(announcement.date) }}</span>
+          </div>
+        </div>
+        <div v-else class="no-announcement">
+          暂时没有新的公告
         </div>
       </div>
     </el-dialog>
@@ -552,6 +611,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 10px;
+
   flex: 1;
   max-width: 500px;
 }
@@ -786,6 +846,7 @@ export default {
   transition: all 0.3s;
   width: 36px;
   height: 36px;
+  position: relative;
 }
 
 .announcement-btn:hover {
@@ -813,11 +874,13 @@ export default {
 .announcement-item h3 {
   margin: 0 0 10px 0;
   color: #333;
+  font-size: 16px;
 }
 
 .announcement-item p {
   margin: 0 0 8px 0;
   color: #666;
+  line-height: 1.5;
 }
 
 .announcement-date {
@@ -834,5 +897,23 @@ export default {
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.new-notice-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background-color: #44ff6d;
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+
+.no-announcement {
+  text-align: center;
+  padding: 30px;
+  color: #999;
+  font-size: 14px;
 }
 </style>
