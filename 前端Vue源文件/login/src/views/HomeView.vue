@@ -9,7 +9,7 @@ import yiwuImage from '@/assets/yifu.png';
 import qitaImage from '@/assets/qita.png';
 import { Search, Bell } from '@element-plus/icons-vue'
 import { ElIcon } from 'element-plus'
-import { ElDialog } from 'element-plus'
+import { ElDialog, ElMessage } from 'element-plus'
 
 export default {
   name: "HomeView",
@@ -39,6 +39,7 @@ export default {
     const hasNewAnnouncement = ref(false);
     const lastCheckTime = ref(new Date().toISOString());
     let pollTimer = null;
+    const showAnnouncementDialog = ref(false);
 
     function base64ToBlob(base64) {
       var byteCharacters = atob(base64);
@@ -179,7 +180,7 @@ export default {
         // 检查返回的商品数组是否为空
         if (!data.goods || data.goods.length === 0) {
           filteredProducts.value = [];
-          noResultsMessage.value = '抱歉，找不到符合您描述要求的商品';
+          noResultsMessage.value = '抱歉找不到符合您描述要求的商品';
         } else {
           products.value = data.goods;
           filteredProducts.value = data.goods;
@@ -238,7 +239,7 @@ export default {
         });
       } catch (error) {
         console.error("获取用户信息失败:", error);
-        ElMessage.error('获取用户信息失败');
+        ElMessage.error('获取用户信��失败');
       }
     }
 
@@ -309,7 +310,7 @@ export default {
 
     // 修改跳转商品页函数
     function goToDetails(product) {
-      console.log('跳转商品详情，商品数据：', product);
+      console.log('跳转商品详情，商品数：', product);
       router.push({
         name: 'GoodDetails',  // 对应 router/index.js 中的路由名称
         params: { 
@@ -370,11 +371,17 @@ export default {
         // 更新最后检查时间
         lastCheckTime.value = new Date().toISOString();
         
-        // 更新公告列表
+        // 更���公告列表
         announcements.value = data.announcements;
 
       } catch (error) {
         console.error("获取公告失败", error);
+        ElMessage.error('获取公告失败，请重试');
+        // 清空公告列表
+        announcements.value = [];
+      } finally {
+        // 无论成功失败都显示对话框
+        showAnnouncementDialog.value = true;
       }
     }
 
@@ -389,6 +396,18 @@ export default {
         clearInterval(pollTimer);
         pollTimer = null;
       }
+    }
+
+    // 在 setup 中添加 formatDate 函数
+    function formatDate(date) {
+      if (!date) return '';
+      return new Date(date).toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
     }
 
     onMounted(() => {
@@ -424,6 +443,8 @@ export default {
       hasNewAnnouncement,
       fetchAnnouncements,
       noResultsMessage,
+      showAnnouncementDialog,
+      formatDate,  // 添加这一行
     };
   },
 };
@@ -467,7 +488,6 @@ export default {
               class="dropdown-menu"
             >
               <button @click="viewProfile">个人信息</button>
-              <button @click="viewNotifications">我的通知</button>
               <button @click="viewMessages">我的消息</button>
               <button @click="contactUs">联系我们</button>
             </div>
@@ -532,13 +552,18 @@ export default {
       width="50%"
     >
       <div class="announcements-container">
-        <div v-for="announcement in announcements" 
-             :key="announcement.id" 
-             class="announcement-item"
-        >
-          <h3>{{ announcement.title }}</h3>
-          <p>{{ announcement.content }}</p>
-          <span class="announcement-date">{{ announcement.date }}</span>
+        <div v-if="announcements && announcements.length > 0">
+          <div v-for="announcement in announcements" 
+               :key="announcement.announce_id" 
+               class="announcement-item"
+          >
+            <h3>{{ announcement.title }}</h3>
+            <p>{{ announcement.content }}</p>
+            <span class="announcement-date">{{ formatDate(announcement.deliver_time) }}</span>
+          </div>
+        </div>
+        <div v-else class="no-announcement">
+          暂时没有新的公告
         </div>
       </div>
     </el-dialog>
@@ -843,11 +868,13 @@ export default {
 .announcement-item h3 {
   margin: 0 0 10px 0;
   color: #333;
+  font-size: 16px;
 }
 
 .announcement-item p {
   margin: 0 0 8px 0;
   color: #666;
+  line-height: 1.5;
 }
 
 .announcement-date {
@@ -875,5 +902,12 @@ export default {
   background-color: #ff4444;
   border-radius: 50%;
   border: 2px solid #fff;
+}
+
+.no-announcement {
+  text-align: center;
+  padding: 30px;
+  color: #999;
+  font-size: 14px;
 }
 </style>
