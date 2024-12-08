@@ -393,8 +393,8 @@ export default {
         const data = await response.json();
         
         // 直接使用返回的据，因为格式已经匹配
-        if (data.picture) {
-          const blob = base64ToBlob(data.picture);
+        if (data.picture_url) {
+          const blob = base64ToBlob(data.picture_url);
           userAvatarUrl.value = URL.createObjectURL(blob);
         } else {
           userAvatarUrl.value = defaultAvatar;
