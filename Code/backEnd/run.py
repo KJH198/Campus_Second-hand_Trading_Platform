@@ -137,25 +137,22 @@ def order_detail():
     type = request.headers.get('type')
     data = request.get_json()
     if type == 'get_order_detail':
+        #print({'success':True, 'order_detail':dbTools.getOrderInfo(data.get('goods_id')), 'goods_detail':dbTools.getGoodsInfo(data.get('goods_id'),data.get('user_id'))})
         return jsonify({'success':True, 'order_detail':dbTools.getOrderInfo(data.get('goods_id')), 'goods_detail':dbTools.getGoodsInfo(data.get('goods_id'),data.get('user_id'))})
     elif type == 'confirm_delivery':
         return jsonify({'success':dbTools.dealDown(data.get('goods_id'), True)})
     elif type == 'request_refund':
-        pass
-    elif type == 'get_comments':
-        pass
-    elif type == 'add_comment':
-        pass
-    elif type == 'add_reply':
-        pass
-    elif type == 'like_comment':
-        pass
-    elif type == 'dislike_comment':
-        pass
-    elif type == 'like_reply':
-        pass
-    elif type == 'dislike_reply':
-        pass
+        return jsonify({'success':dbTools.dealDown(data.get('goods_id'), False)})
+    elif type == 'comments':
+        return jsonify(dbTools.getComment(data.get("goods_id")))
+    elif type == 'commit_comment':
+        return jsonify({'success':dbTools.addOrderComment(data.get("goods_id"),data.get("order_grade"),data.get("comment"))})
+    elif type == 'commit_reply':
+        return jsonify({'success':dbTools.addSecondaryOrderComment(data.get('deliver_id'), data.get('order_comment_id'),data.get('comment'))})
+    elif type == 'like':
+        return jsonify({'success':dbTools.like_order_comment(data.get("like"),data.get("level"),data.get("cancel"),data.get("id"))})
+
+    
     
 
 def begin():

@@ -587,6 +587,7 @@ def getOrderInfo(goods_id):
     buyer_id = order.buyer_id
     order_state = order.order_state
     deal_time = order.deal_time
+    print(buyer_id,order_state,deal_time)
     return {"buyer_id":buyer_id,"order_state":order_state,"deal_time":deal_time}
 
 # 添加订单评价
@@ -639,16 +640,20 @@ def getSecondaryOrderComment(order_comment_id):
     for item in secondaryOrderComment:
         secondary_order_comment_id = item.secondary_order_comment_id
         deliver_id = item.deliver_id
+        user = User.query.filter_by(user_id = deliver_id).first()
+        with open(picturePath + user.picture_url,'rb') as file:
+            picture_byte_stream = file.read()
+        base64_str = base64.b64encode(picture_byte_stream).decode("ascii")
         comment = item.comment
         comment_time = item.comment_time
         helpful = item.helpful
         unhelpful = item.unhelpful
-        data.append({"secondary_order_comment_id":secondary_order_comment_id,"deliver_id":deliver_id,
+        data.append({"secondary_order_comment_id":secondary_order_comment_id,"deliver_id":deliver_id,"picture":base64_str,
                      "comment":comment,"comment_time":comment_time,"helpful":helpful,"unhelpful":unhelpful,})
     return data
 
 # 赞、踩逻辑
-def like(like,level,cancel,id):
+def like_order_comment(like,level,cancel,id):
     if level == 1:
         orderComment = OrderComment.query.filter_by(order_comment_id = id).first()
         if like: 
@@ -670,13 +675,17 @@ def like(like,level,cancel,id):
 
 # 获取一二级订单评价组合结构体
 def getComment(goods_id):
-    orderComments = OrderComment.query.filter_by(goods_id = goods_id).all()
     data = []
-    for orderComment in orderComments:
-        this = {}
-        this.update(getOrderComment(orderComment.goods_id))
-        this.update({"reply":getSecondaryOrderComment(orderComment.order_comment_id)})
-        data.append(this)
+    order = Order.query.filter_by(goods_id = goods_id).first()
+    buyer_id = order.buyer_id
+    user = User.query.filter_by(user_id = buyer_id).first()
+    with open(picturePath + user.picture_url,'rb') as file:
+        picture_byte_stream = file.read()
+    base64_str = base64.b64encode(picture_byte_stream).decode("ascii")
+    for orderComment in getOrderComment(goods_id):
+        orderComment.update({"picture":base64_str})
+        orderComment.update({"reply":getSecondaryOrderComment(orderComment.get('order_comment_id'))})
+        data.append(orderComment)
     return data
 ##################################################### 收藏管理 #######################################################
 # 用户添加收藏

@@ -425,6 +425,73 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 订单部分 -->
+    <div class="orders-section">
+      <div class="section-header">
+        <h2 class="section-title">我的订单</h2>
+      </div>
+      
+      <el-tabs v-model="activeOrderTab" class="order-tabs">
+        <el-tab-pane label="已买到的" name="bought">
+          <div class="orders-grid">
+            <div v-if="!boughtOrders || boughtOrders.length === 0" class="no-orders">
+              暂无已买到的订单
+            </div>
+            <div v-else v-for="order in boughtOrders" 
+                 :key="order.goods_id" 
+                 class="order-card" 
+                 @click="goToOrderDetails(order)">
+              <img :src="order.goods_picture" :alt="order.goods_name" class="order-image"/>
+              <div class="order-info">
+                <h3>{{ order.goods_name }}</h3>
+                <div class="order-price">¥{{ order.goods_price }}</div>
+                <div class="order-status">{{ getOrderStatusText(order.order_state) }}</div>
+                <div class="order-time">{{ formatTime(order.deal_time) }}</div>
+                <div class="order-actions">
+                  <el-button 
+                    v-if="order.order_state === '已下单'"
+                    type="primary" 
+                    size="small"
+                    @click.stop="confirmDelivery(order.goods_id)"
+                  >
+                    确认送达
+                  </el-button>
+                  <el-button 
+                    v-if="['已下单', '已送达'].includes(order.order_state)"
+                    type="danger" 
+                    size="small"
+                    @click.stop="requestRefund(order.goods_id)"
+                  >
+                    申请退款
+                  </el-button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-tab-pane>
+        
+        <el-tab-pane label="已卖出的" name="sold">
+          <div class="orders-grid">
+            <div v-if="!soldOrders || soldOrders.length === 0" class="no-orders">
+              暂无已卖出的订单
+            </div>
+            <div v-else v-for="order in soldOrders" 
+                 :key="order.goods_id" 
+                 class="order-card" 
+                 @click="goToOrderDetails(order)">
+              <img :src="order.goods_picture" :alt="order.goods_name" class="order-image"/>
+              <div class="order-info">
+                <h3>{{ order.goods_name }}</h3>
+                <div class="order-price">¥{{ order.goods_price }}</div>
+                <div class="order-status">{{ getOrderStatusText(order.order_state) }}</div>
+                <div class="order-time">{{ formatTime(order.deal_time) }}</div>
+              </div>
+            </div>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+    </div>
   </template>
   
   <script>
@@ -1255,6 +1322,167 @@
         }
       }
   
+      const activeOrderTab = ref('bought');
+      const boughtOrders = ref([]);
+      const soldOrders = ref([]);
+
+      // 格式化时间函数
+      function formatTime(timeStr) {
+        if (!timeStr) return '';
+        
+        try {
+          const date = new Date(timeStr);  // 直接解析 GMT 格式的时间字符串
+          const now = new Date();
+          const diff = now - date;
+          
+          if (diff < 60000) { // 小于1分钟
+            return '刚刚';
+          } else if (diff < 3600000) { // 小于1小时
+            return `${Math.floor(diff / 60000)}分钟前`;
+          } else if (diff < 86400000) { // 小于24小时
+            return `${Math.floor(diff / 3600000)}小时前`;
+          } else {
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          }
+        } catch (error) {
+          console.error('Error parsing date:', error, timeStr);
+          return timeStr; // 如果解析失败，返回原始字符串
+        }
+      }
+
+      // 获取订单列表
+      async function fetchOrders() {
+        try {
+          const response = await fetch("/user_profile", {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'type': 'get_orders'
+            },
+            body: JSON.stringify({
+              user_id: route.query.user_id
+            })
+          });
+
+          if (!response.ok) throw new Error('获取订单列表失败');
+
+          const data = await response.json();
+          console.log("Raw order data:", data);
+
+          if (data.success) {
+            // 处理已买到的订单
+            boughtOrders.value = data.bought_orders
+              .map(order => ({
+                goods_id: order.goods_id,
+                goods_name: order.goods_name,
+                goods_price: order.goods_price,
+                order_state: order.order_state,
+                deal_time: order.deal_time,
+                goods_picture: order.picture ? 
+                  URL.createObjectURL(base64ToBlob(order.picture)) : defaultAvatar
+              }))
+              .sort((a, b) => new Date(b.deal_time) - new Date(a.deal_time)); // 按时间从新到旧排序
+            
+            // 处理已卖出的订单
+            soldOrders.value = data.sold_orders
+              .map(order => ({
+                goods_id: order.goods_id,
+                goods_name: order.goods_name,
+                goods_price: order.goods_price,
+                order_state: order.order_state,
+                deal_time: order.deal_time,
+                goods_picture: order.picture ? 
+                  URL.createObjectURL(base64ToBlob(order.picture)) : defaultAvatar
+              }))
+              .sort((a, b) => new Date(b.deal_time) - new Date(a.deal_time)); // 按时间从新到旧排序
+          }
+        } catch (error) {
+          console.error('Error fetching orders:', error);
+          ElMessage.error('获取订单列表失败');
+        }
+      }
+
+      // 跳转到订单详情
+      function goToOrderDetails(order) {
+        router.push({
+          name: 'OrderDetails',
+          params: { 
+            orderId: order.goods_id
+          },
+          query: {
+            current_user_id: route.query.current_user_id,
+            userAvatar: route.query.userAvatar
+          }
+        });
+      }
+
+      // 获取订单状态文本
+      function getOrderStatusText(status) {
+        // 后端直接返回中文状态，直接返回即可
+        return status || '未知状态';
+      }
+
+      // 确认送达
+      async function confirmDelivery(goodsId) {
+      try {
+      const response = await fetch("/order_detail", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          'type': 'confirm_delivery'
+        },
+          body: JSON.stringify({
+          goods_id: goodsId,
+          user_id: route.query.current_user_id
+          })
+        });
+        if (!response.ok) throw new Error('确认送达失败');
+        const data = await response.json();
+        if (data.success) {
+          ElMessage.success('确认送达成功');
+          await fetchOrders(); // 重新获取订单列表
+        }
+        } catch (error) {
+          console.error('Error confirming delivery:', error);
+          ElMessage.error('确认送达失败');
+        }
+      }
+      // 申请退款
+      async function requestRefund(goodsId) {
+      try {
+      const response = await fetch("/order_detail", {
+      method: "POST",
+      headers: {
+      'Content-Type': 'application/json',
+      'type': 'request_refund'
+      },
+      body: JSON.stringify({
+        goods_id: goodsId,
+        user_id: route.query.current_user_id
+      })
+      });
+      if (!response.ok) throw new Error('申请退款失败');
+      const data = await response.json();
+      if (data.success) {
+        ElMessage.success('退款申请已提交');
+        await fetchOrders(); // 重新获取订单列表
+      }
+      } catch (error) {
+        console.error('Error requesting refund:', error);
+        ElMessage.error('申请退款失败');
+      }
+      }
+
+
+      onMounted(() => {
+        fetchUserInfo();
+        fetchUserGoods();
+        fetchFavorites();
+        if (isCurrentUser.value) {
+          fetchOrders();
+        }
+      });
+
       return {
         userAvatar,
         userForm,
@@ -1326,7 +1554,15 @@
         openAddAddressDialog,
         handleEditAddress,
         handleDeleteAddress,
-        submitAddress
+        submitAddress,
+        activeOrderTab,
+        boughtOrders,
+        soldOrders,
+        goToOrderDetails,
+        getOrderStatusText,
+        formatTime,
+        confirmDelivery,
+        requestRefund
       };
     }
   };
@@ -1702,5 +1938,164 @@
   margin-bottom: 20px;
   display: flex;
   justify-content: flex-end;
+}
+
+/* 订单列表样式 */
+.orders-section {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px auto;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  width: 90%; /* 控制组件宽度，与页面两侧留有距离 */
+  max-width: 1200px;
+}
+
+.section-header {
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 15px;
+}
+
+.section-title {
+  font-size: 18px;
+  color: #333;
+  margin: 0;
+  font-weight: bold;
+}
+
+.order-tabs {
+  margin-top: 20px;
+}
+
+.orders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+  padding: 10px 0;
+}
+
+.order-card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.order-card:hover {
+  transform: translateY(-5px);
+}
+
+.order-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.order-info {
+  padding: 15px;
+}
+
+.order-info h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.order-price {
+  margin: 10px 0;
+  color: #ff5000;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.order-status {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.order-time {
+  color: #999;
+  font-size: 14px;
+}
+
+.order-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+.order-actions .el-button {
+  padding: 6px 12px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .orders-section {
+    width: 95%;
+    padding: 15px;
+  }
+  
+  .orders-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+  }
+  
+  .order-info h3 {
+    font-size: 14px;
+  }
+  
+  .order-price {
+    font-size: 16px;
+  }
+}
+
+.no-orders {
+  text-align: center;
+  padding: 40px 0;
+  color: #999;
+  font-size: 14px;
+  width: 100%;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.el-tabs {
+  margin-top: 20px;
+}
+
+:deep(.el-tabs__nav-wrap) {
+  padding: 0 20px;
+}
+
+:deep(.el-tabs__item) {
+  font-size: 16px;
+  padding: 0 20px;
+}
+
+:deep(.el-tabs__item.is-active) {
+  color: #ff5000;
+}
+
+:deep(.el-tabs__active-bar) {
+  background-color: #ff5000;
+}
+
+/* 响应式设计补充 */
+@media (max-width: 768px) {
+  :deep(.el-tabs__item) {
+    font-size: 14px;
+    padding: 0 15px;
+  }
+  
+  .no-orders {
+    padding: 30px 0;
+    font-size: 13px;
+  }
 }
   </style>
