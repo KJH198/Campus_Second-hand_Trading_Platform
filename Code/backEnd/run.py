@@ -23,10 +23,12 @@ def login():
 
 @app.route('/home', methods=['GET','POST'])
 def home():
+    type = request.headers.get('type')
     if request.method == 'GET':
+        if type == 'announcement':
+            return jsonify({"announcements":dbTools.getAllAnnouncement()})
         return jsonify({"goods":dbTools.getUnselledGoods(80)})
     
-    type = request.headers.get('type')
     data = request.get_json()
     if type == 'user_picture':
         picture_url = dbTools.getUserPictureURL(data.get("user_id"))
@@ -36,8 +38,6 @@ def home():
         return jsonify({"goods":dbTools.searchGoods(data.get("query"))})
     elif type == 'category_search':
         return jsonify({"goods":dbTools.searchGoodsCategory(data.get("category_name"))})
-    elif type == 'announcement':
-        return jsonify({"announcements":dbTools.getAllAnnouncement()})
     elif type == 'user_info':
         return jsonify({"user_info":dbTools.getUserInfo(data.get("user_id"))})
 
@@ -125,7 +125,10 @@ def manager():
         return jsonify({"success":dbTools.deleteAccusation(data.get('accusation_id'))})
     elif type == 'delete_announce':
         return jsonify({"success":dbTools.deleteAnnouncement(data.get('announce_id'))})
-        
+    elif type == 'ban':
+        return jsonify({"success":dbTools.ban(data.get('user_id'))})
+    elif type == 'deban':
+        return jsonify({"success":dbTools.unban(data.get('user_id'))})
 
 def begin():
     DB_Initiator.init()

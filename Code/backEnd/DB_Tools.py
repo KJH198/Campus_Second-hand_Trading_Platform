@@ -545,7 +545,7 @@ def sendAnnouncement(manger_name,title,content):
 
 def getAllAnnouncement():
     announcements = Announcement.query.all()
-    data = [{"manger_name":announcement.manger_name,"deliver_time":announcement.deliver_time,"title":announcement.title,"content":announcement.content} for announcement in announcements]
+    data = [{"id":announcement.manger_name,"date":announcement.deliver_time,"title":announcement.title,"content":announcement.content} for announcement in announcements]
     return data
 
 def deleteAnnouncement(announcement_id):
