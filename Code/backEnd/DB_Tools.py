@@ -700,7 +700,19 @@ def getAddress(user_id):
 
 # 删除地址
 def deleteAddress(address_id):
+    print("address_id:", address_id)
     address = Address.query.filter_by(address_id = address_id).first()
     db.session.delete(address)
+    db.session.commit()
+    return True
+
+# 修改地址
+def reDefineAddress(info): # address_id,receiver_name,phone_number,address
+    print(info)
+    if (info.get("address_id")): address = Address.query.filter_by(address_id = info.get("address_id")).first()
+    else: return False
+    if (info.get("receiver_name")): address.receiver_name = info.get("receiver_name")
+    if (info.get("phone_number")): address.phone_number = info.get("phone_number")
+    if (info.get("address")): address.address = info.get("address")
     db.session.commit()
     return True

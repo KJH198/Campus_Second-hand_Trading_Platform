@@ -39,12 +39,17 @@
             <div class="avatar-section">
               <div class="avatar-container">
                 <img :src="userAvatar" alt="用户头像" class="large-avatar" />
-                <div class="avatar-overlay" @click="triggerAvatarUpload">
+                <div 
+                  v-if="isCurrentUser" 
+                  class="avatar-overlay" 
+                  @click="triggerAvatarUpload"
+                >
                   <el-icon><Camera /></el-icon>
                   <span>更换头像</span>
                 </div>
               </div>
               <input 
+                v-if="isCurrentUser"
                 type="file" 
                 ref="avatarInput" 
                 style="display: none" 
@@ -58,14 +63,11 @@
               <p><strong>用户名：</strong>{{ userForm.user_name }}</p>
               <p><strong>手机号：</strong>{{ userForm.phone_number }}</p>
               <p><strong>简介：</strong>{{ userForm.other_information }}</p>
+              <div class="button-group" v-if="isCurrentUser">
+                <el-button type="primary" @click="openEditDialog">编辑信息</el-button>
+                <el-button type="primary" @click="openAddressDialog">查看收货地址</el-button>
+              </div>
               <el-button 
-                v-if="isCurrentUser" 
-                type="primary" 
-                @click="openEditDialog"
-              >
-                编辑信息
-              </el-button>
-              <el-button
                 v-if="!isCurrentUser"
                 type="danger"
                 size="small"
@@ -352,12 +354,83 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 添加收货地址对话框组件 -->
+    <el-dialog
+      v-model="showAddressDialog"
+      title="收货地址管理"
+      width="60%"
+    >
+      <div class="address-header">
+        <el-button type="primary" @click="openAddAddressDialog">
+          <el-icon><Plus /></el-icon>添加收货地址
+        </el-button>
+      </div>
+      
+      <el-table :data="addresses" style="width: 100%">
+        <el-table-column prop="receiver_name" label="收货人" width="120" />
+        <el-table-column prop="phone_number" label="联系电话" width="150" />
+        <el-table-column prop="address" label="收货地址" />
+        <el-table-column label="操作" width="150">
+          <template #default="scope">
+            <el-button
+              size="small"
+              type="primary"
+              @click="handleEditAddress(scope.row)"
+            >
+              编辑
+            </el-button>
+            <el-button
+              size="small"
+              type="danger"
+              @click="handleDeleteAddress(scope.row)"
+            >
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
+
+    <!-- 添加/编辑地址的对话框 -->
+    <el-dialog
+      v-model="showAddressEditDialog"
+      :title="addressDialogTitle"
+      width="30%"
+    >
+      <el-form
+        ref="addressFormRef"
+        :model="addressForm"
+        :rules="addressRules"
+        label-width="80px"
+      >
+        <el-form-item label="收货人" prop="receiver_name">
+          <el-input v-model="addressForm.receiver_name" />
+        </el-form-item>
+        <el-form-item label="联系电话" prop="phone_number">
+          <el-input v-model="addressForm.phone_number" />
+        </el-form-item>
+        <el-form-item label="收货地址" prop="address">
+          <el-input
+            v-model="addressForm.address"
+            type="textarea"
+            :rows="3"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showAddressEditDialog = false">取消</el-button>
+          <el-button type="primary" @click="submitAddress">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </template>
   
   <script>
   import { ref, computed, onMounted, onUnmounted } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
-  import { ElMessage } from 'element-plus';
+  import { ElMessage, ElMessageBox } from 'element-plus';
   import { Bell, Camera, Plus, Warning } from '@element-plus/icons-vue';
   import defaultAvatar from '@/assets/tubiao.png';
   import { ElImageViewer } from 'element-plus';
@@ -529,27 +602,43 @@
         }
   
         try {
-          const formData = new FormData();
-          formData.append('avatar', file);
-          formData.append('user_id', user_id);
-  
-          const response = await fetch("/user_profile", {
-            method: 'POST',
-            headers: {
-              'type': 'update_avatar'
-            },
-            body: formData
-          });
-  
-          if (!response.ok) throw new Error('上传失败');
-  
-          const data = await response.json();
-          if (data.success) {
-            userAvatar.value = URL.createObjectURL(file);
-            ElMessage.success('头像更新成功');
-          } else {
-            ElMessage.error(data.message || '上传失败');
-          }
+          // 将文件转换为 base64
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          
+          reader.onload = async () => {
+            // 获取 base64 字符串并去掉前缀
+            const base64String = reader.result.split(',')[1];
+            
+            const response = await fetch("/user_profile", {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'type': 'update_avatar'
+              },
+              body: JSON.stringify({
+                picture: base64String,
+                user_id: route.query.user_id,
+                pictureName: file.name
+              })
+            });
+
+            if (!response.ok) throw new Error('上传失败');
+
+            const data = await response.json();
+            if (data.success) {
+              userAvatar.value = URL.createObjectURL(file);
+              ElMessage.success('头像更新成功');
+            } else {
+              ElMessage.error(data.message || '上传失败');
+            }
+          };
+
+          reader.onerror = (error) => {
+            console.error('Error reading file:', error);
+            ElMessage.error('读取文件失败');
+          };
+
         } catch (error) {
           console.error('Error uploading avatar:', error);
           ElMessage.error('头像上传失败，请重试');
@@ -995,6 +1084,177 @@
         }
       }
   
+      // 收货地址相关的响应式变量
+      const showAddressDialog = ref(false);
+      const showAddressEditDialog = ref(false);
+      const addresses = ref([]);
+      const addressForm = ref({
+        address_id: '',
+        receiver_name: '',
+        phone_number: '',
+        address: ''
+      });
+      const addressFormRef = ref(null);
+      const isEditingAddress = ref(false);
+
+      // 表单验证规则
+      const addressRules = {
+        receiver_name: [
+          { required: true, message: '请输入收货人姓名', trigger: 'blur' },
+          { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
+        ],
+        phone_number: [
+          { required: true, message: '请输入联系电话', trigger: 'blur' },
+          { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+        ],
+        address: [
+          { required: true, message: '请输入收货地址', trigger: 'blur' },
+          { min: 5, max: 100, message: '长度在 5 到 100 个字符', trigger: 'blur' }
+        ]
+      };
+
+      // 计算属性：对话框标题
+      const addressDialogTitle = computed(() => {
+        return isEditingAddress.value ? '编辑收货地址' : '添加收货地址';
+      });
+
+      // 打开地址管理对话框
+      function openAddressDialog() {
+        showAddressDialog.value = true;
+        fetchAddresses();
+      }
+
+      // 获取收货地址列表
+      async function fetchAddresses() {
+        try {
+          const response = await fetch("/user_profile", {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'type': 'get_addresses'
+            },
+            body: JSON.stringify({
+              user_id: route.query.user_id
+            })
+          });
+
+          if (!response.ok) throw new Error('获取地址失败');
+
+          const data = await response.json();
+          if (data.success) {
+            addresses.value = data.addresses;
+          }
+        } catch (error) {
+          console.error('Error fetching addresses:', error);
+          ElMessage.error('获取收货地址失败');
+        }
+      }
+
+      // 打开添加地址对话框
+      function openAddAddressDialog() {
+        isEditingAddress.value = false;
+        addressForm.value = {
+          address_id: '',
+          receiver_name: '',
+          phone_number: '',
+          address: ''
+        };
+        showAddressEditDialog.value = true;
+      }
+
+      // 处理编辑地址
+      function handleEditAddress(address) {
+        console.log('Editing address:', address);  // 添加调试日志
+        isEditingAddress.value = true;
+        addressForm.value = {
+          address_id: address.address_id,
+          receiver_name: address.receiver_name,
+          phone_number: address.phone_number,
+          address: address.address
+        };
+        showAddressEditDialog.value = true;
+      }
+
+      // 处理删除地址
+      function handleDeleteAddress(address) {
+        ElMessageBox.confirm(
+          '确定要删除这个收货地址吗？',
+          '提示',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning',
+          }
+        ).then(async () => {
+          try {
+            const response = await fetch("/user_profile", {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'type': 'delete_address'
+              },
+              body: JSON.stringify({
+                user_id: route.query.user_id,
+                address_id: address.address_id
+              })
+            });
+
+            if (!response.ok) throw new Error('删除地址失败');
+
+            const data = await response.json();
+            if (data.success) {
+              ElMessage.success('删除成功');
+              await fetchAddresses();
+            }
+          } catch (error) {
+            console.error('Error deleting address:', error);
+            ElMessage.error('删除失败');
+          }
+        }).catch(() => {});
+      }
+
+      // 提交地址表单
+      async function submitAddress() {
+        if (!addressFormRef.value) return;
+
+        try {
+          await addressFormRef.value.validate();
+          console.log('Form data before submit:', addressForm.value);
+          
+          const response = await fetch("/user_profile", {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'type': isEditingAddress.value ? 'update_address' : 'add_address'
+            },
+            body: JSON.stringify({
+              user_id: route.query.user_id,
+              address_id: addressForm.value.address_id,  // 添加 address_id 字段
+              receiver_name: addressForm.value.receiver_name,
+              phone_number: addressForm.value.phone_number,
+              address: addressForm.value.address
+            })
+          });
+          // 添加调试日志
+          console.log('Request data:', response);
+
+          if (!response.ok) throw new Error('保存地址失败');
+
+          const data = await response.json();
+          console.log("address data:", data);
+          if (data.success) {
+            ElMessage.success(isEditingAddress.value ? '修改成功' : '添加成功');
+            showAddressEditDialog.value = false;
+            fetchAddresses();
+          } else {
+            ElMessage.error(data.message || '保存失败');
+          }
+        } catch (error) {
+          console.error('Error saving address:', error);
+          ElMessage.error('保存失败，请稍后重试');
+        }
+      }
+  
       return {
         userAvatar,
         userForm,
@@ -1054,7 +1314,19 @@
         reportRules,
         handleReport,
         handleCloseReport,
-        submitReport
+        submitReport,
+        showAddressDialog,
+        showAddressEditDialog,
+        addresses,
+        addressForm,
+        addressFormRef,
+        addressRules,
+        addressDialogTitle,
+        openAddressDialog,
+        openAddAddressDialog,
+        handleEditAddress,
+        handleDeleteAddress,
+        submitAddress
       };
     }
   };
@@ -1418,5 +1690,17 @@
   justify-content: flex-end;
   gap: 10px;
   margin-top: 20px;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.address-header {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: flex-end;
 }
   </style>

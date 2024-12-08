@@ -2,6 +2,7 @@ import backEnd.DB_Initiator as DB_Initiator
 from backEnd.DB_Initiator import app
 import backEnd.DB_Tools as dbTools
 from flask import request,render_template,jsonify, send_file
+import base64
 
 
 @app.route('/', methods=['GET','POST'])
@@ -85,10 +86,20 @@ def user_profile():
                 'other_information':data.get('other_information')}
         return jsonify({"success":dbTools.reDefineUser(info)})
     elif type == 'update_avatar':
-        pass
+        info = {'user_id':data.get('user_id'), 'picture':bytes(base64.b64decode(data.get('picture'))), 'pictureName':data.get('pictureName')}
+        return jsonify({"success":dbTools.reDefineUser(info)})
     elif type == 'get_favorites':
         return jsonify({"success":True, "favorites":dbTools.getUserCollection(data.get('user_id'))})
-        
+    elif type == 'get_addresses':
+        return jsonify({"success":True, "addresses":dbTools.getAddress(data.get('user_id'))})
+    elif type == 'delete_address':
+        return jsonify({"success":dbTools.deleteAddress(data.get('address_id'))})
+    elif type == 'add_address':
+        return jsonify({"success":dbTools.addAddress(data.get('user_id'),data.get('receiver_name'),data.get('phone_number'),data.get('address'))})
+    elif type == 'update_address':
+        info = {'address_id':data.get('address_id'), 'receiver_name':data.get('receiver_name'), 'phone_number':data.get('phone_number'), 'address':data.get('address')}
+        return jsonify({"success":dbTools.reDefineAddress(info)})
+
 @app.route('/goods_picture_show', methods=['POST'])
 def goods_picture_show():
     return jsonify({'success': True,'message': '上传成功','url':dbTools.transb264(request.files.get('file'))})
