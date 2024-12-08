@@ -165,6 +165,7 @@ def getBuyerOrders(user_id):
 def getSellerOrders(user_id):
     goods_list = Goods.query.filter_by(seller_id = user_id,goods_state = '已售出').first()
     data = []
+    if goods_list == None: return data
     for goods in goods_list:
         goods_id = goods.goods_id
         order = Order.query.filter_by(goods_id = goods_id).first()

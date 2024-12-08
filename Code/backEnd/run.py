@@ -99,6 +99,8 @@ def user_profile():
     elif type == 'update_address':
         info = {'address_id':data.get('address_id'), 'receiver_name':data.get('receiver_name'), 'phone_number':data.get('phone_number'), 'address':data.get('address')}
         return jsonify({"success":dbTools.reDefineAddress(info)})
+    elif type == 'get_orders':
+        return jsonify({"success":True, "bought_orders":dbTools.getBuyerOrders(data.get('user_id')), "sold_orders":dbTools.getSellerOrders(data.get('user_id'))})
 
 @app.route('/goods_picture_show', methods=['POST'])
 def goods_picture_show():
@@ -125,6 +127,32 @@ def manager():
         return jsonify({"success":dbTools.deleteAccusation(data.get('accusation_id'))})
     elif type == 'delete_announce':
         return jsonify({"success":dbTools.deleteAnnouncement(data.get('announce_id'))})
+    
+@app.route('/order_detail', methods=['POST'])
+def order_detail():
+    type = request.headers.get('type')
+    data = request.get_json()
+    if type == 'get_order_detail':
+        #return jsonify({'success':True, 'order_detail':})
+        pass
+    elif type == 'confirm_delivery':
+        pass
+    elif type == 'request_refund':
+        pass
+    elif type == 'get_comments':
+        pass
+    elif type == 'add_comment':
+        pass
+    elif type == 'add_reply':
+        pass
+    elif type == 'like_comment':
+        pass
+    elif type == 'dislike_comment':
+        pass
+    elif type == 'like_reply':
+        pass
+    elif type == 'dislike_reply':
+        pass
         
 
 def begin():
