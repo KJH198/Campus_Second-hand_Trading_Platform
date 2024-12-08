@@ -417,7 +417,7 @@ def like(like,level,cancel,id):
             else: goodsConsultation.helpful = goodsConsultation.helpful + 1
         else: 
             if cancel: goodsConsultation.unhelpful = goodsConsultation.unhelpful - 1
-            else: goodsConsultation.unhelpful = goodsConsultation.unhelpful + 1   
+            else: goodsConsultation.unhelpful = goodsConsultation.unhelpful + 1
     else:
         goodsConsultationReply = GoodsConsultationReply.query.filter_by(goods_consultation_reply_id = id).first()
         if like: 
@@ -554,6 +554,7 @@ def deleteAnnouncement(announcement_id):
     db.session.commit()
     return True
 ##################################################### 订单管理 ########################################################
+# 购买商品
 def buyGoods(goods_id,buyer_id):
     newOrder = Order(
         goods_id = goods_id,
@@ -565,6 +566,7 @@ def buyGoods(goods_id,buyer_id):
     db.session.commit()
     return True
 
+# 结束订单（但不删除记录）
 def dealDown(goods_id,getIt):
     order = Order.query.filter_by(goods_id = goods_id).first()
     if getIt:
@@ -574,8 +576,93 @@ def dealDown(goods_id,getIt):
     else:
         goods = Goods.query.filter_by(goods_id = goods_id).first()
         goods.goods_state = '在售'
-        order.order_state = '已退款'
+        db.session.delete(order)
     db.session.commit()
+    return True
+
+# 获取订单信息
+def getOrderInfo(goods_id):
+    order = Order.query.filter_by(goods_id = goods_id).first()
+    buyer_id = order.buyer_id
+    order_state = order.order_state
+    deal_time = order.deal_time
+    return {"buyer_id":buyer_id,"order_state":order_state,"deal_time":deal_time}
+
+# 添加订单评价
+def addOrderComment(goods_id,order_grade,comment):
+    newOrderComment = OrderComment(
+        goods_id = goods_id,
+        order_grade = order_grade,
+        comment = comment,
+        comment_time = datetime.now(),
+        helpful = 0,
+        unhelpful = 0
+    )
+    db.session.add(newOrderComment)
+    db.session.commit()
+    return True
+
+# 获取一级订单评价
+def getOrderComment(goods_id):
+    orderComment = OrderComment.query.filter_by(goods_id = goods_id).all()
+    data = []
+    for item in orderComment:
+        order_grade = item.order_grade
+        comment = item.comment
+        comment_time = item.comment_time
+        helpful = item.helpful
+        unhelpful = item.unhelpful
+        data.append({"order_grade":order_grade,"comment":comment,"comment_time":comment_time,
+                     "helpful":helpful,"unhelpful":unhelpful,})
+    return data
+
+# 添加二级订单评价
+def addSecondaryOrderComment(deliver_id,order_comment_id,comment):
+    newSecondaryOrderComment = SecondaryOrderComment(
+        deliver_id = deliver_id,
+        order_comment_id = order_comment_id,
+        comment = comment,
+        comment_time = datetime.now(),
+        helpful = 0,
+        unhelpful = 0
+    )
+    db.session.add(newSecondaryOrderComment)
+    db.session.commit()
+    return True
+
+# 获取二级订单评价
+def getSecondaryOrderComment(order_comment_id):
+    secondaryOrderComment = SecondaryOrderComment.query.filter_by(order_comment_id = order_comment_id).all()
+    data = []
+    for item in secondaryOrderComment:
+        deliver_id = item.deliver_id
+        comment = item.comment
+        comment_time = item.comment_time
+        helpful = item.helpful
+        unhelpful = item.unhelpful
+        data.append({"deliver_id":deliver_id,"comment":comment,"comment_time":comment_time,
+                     "helpful":helpful,"unhelpful":unhelpful,})
+    return data
+
+# 赞、踩逻辑
+def like(like,level,cancel,id):
+    if level == 1:
+        orderComment = OrderComment.query.filter_by(order_comment_id = id).first()
+        if like: 
+            if cancel: orderComment.helpful = orderComment.helpful - 1
+            else: orderComment.helpful = orderComment.helpful + 1
+        else: 
+            if cancel: orderComment.unhelpful = orderComment.unhelpful - 1
+            else: orderComment.unhelpful = orderComment.unhelpful + 1
+    else:
+        secondaryOrderComment = SecondaryOrderComment.query.filter_by(secondary_order_comment_id = id).first()
+        if like: 
+            if cancel: secondaryOrderComment.helpful = secondaryOrderComment.helpful - 1
+            else: secondaryOrderComment.helpful = secondaryOrderComment.helpful + 1
+        else: 
+            if cancel: secondaryOrderComment.unhelpful = secondaryOrderComment.unhelpful - 1
+            else: secondaryOrderComment.unhelpful = secondaryOrderComment.unhelpful + 1 
+    db.session.commit()   #提交事务
     return True
 ##################################################### 收藏管理 #######################################################
 # 用户添加收藏
@@ -642,6 +729,7 @@ def sendAccusation(info): # content, accuser_id, accused_user_id, accused_goods_
     db.session.commit()
     return True
 
+# 获取举报列表
 def getAccusations():
     accusations = Accusation.query.all()
     data = []
@@ -668,7 +756,7 @@ def getAccusations():
         data.append(info)
     return data
     
-    
+# 删除举报
 def deleteAccusation(accusation_id):
     accusation = Accusation.query.filter_by(accusation_id = accusation_id).first()
     db.session.delete(accusation)
