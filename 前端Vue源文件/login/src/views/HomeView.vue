@@ -40,6 +40,7 @@ export default {
     const lastCheckTime = ref(new Date().toISOString());
     let pollTimer = null;
     const showAnnouncementDialog = ref(false);
+    const lastAnnouncementTime = ref(null);
 
     function base64ToBlob(base64) {
       var byteCharacters = atob(base64);
@@ -360,21 +361,23 @@ export default {
 
         const data = await response.json();
         
-        // 如果是点击事件触发的，更新最后检查时间并清除新公告标记
-        if (event?.type === 'click') {
-          lastCheckTime.value = new Date().toISOString();
-          hasNewAnnouncement.value = false;
-          showAnnouncementDialog.value = true;
-        } else {
-          // 如果是轮询触发的，检查是否有新公告
-          const hasNew = data.announcements.some(announcement => {
-            return new Date(announcement.date) > new Date(lastCheckTime.value);
-          });
-          hasNewAnnouncement.value = hasNew;
-        }
-        
         // 更新公告列表
         announcements.value = data.announcements;
+
+        // 如果有公告，找出最新的公告时间
+        if (announcements.value && announcements.value.length > 0) {
+          const latestTime = Math.max(...announcements.value.map(a => new Date(a.deliver_time).getTime()));
+          
+          // 如果是点击事件，更新lastAnnouncementTime并隐藏红点
+          if (event?.type === 'click') {
+            lastAnnouncementTime.value = latestTime;
+            hasNewAnnouncement.value = false;
+            showAnnouncementDialog.value = true;
+          } else {
+            // 如果是轮询，比较时间来决定是否显示红点
+            hasNewAnnouncement.value = !lastAnnouncementTime.value || latestTime > lastAnnouncementTime.value;
+          }
+        }
 
       } catch (error) {
         console.error("获取公告失败", error);
