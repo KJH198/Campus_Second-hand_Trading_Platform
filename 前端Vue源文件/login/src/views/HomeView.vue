@@ -345,7 +345,7 @@ export default {
     // 获取公告函数
     async function fetchAnnouncements() {
       try {
-        const response = await fetch("/goods_detail", {
+        const response = await fetch("/home", {
           method: "GET",
           headers: {
             'Content-Type': 'application/json',
