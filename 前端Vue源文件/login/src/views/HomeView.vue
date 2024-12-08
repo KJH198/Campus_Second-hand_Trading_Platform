@@ -73,7 +73,7 @@ export default {
     };
 
     /**
-     * 请求商品接口，一上来就执行，希望获得随机商品数组。
+     * 请求商品接口上来就执行，希望获得随机商品数组。
      * data{
      * pro
      * }
@@ -360,23 +360,21 @@ export default {
         }
 
         const data = await response.json();
-        
-        // 更新公告列表
+        console.log("后端返回的公告数据:", data);
         announcements.value = data.announcements;
-
+        
         // 如果有公告，找出最新的公告时间
         if (announcements.value && announcements.value.length > 0) {
-          const latestTime = Math.max(...announcements.value.map(a => new Date(a.deliver_time).getTime()));
+          const latestTime = Math.max(...announcements.value.map(a => new Date(a.date).getTime()));
           
-          // 如果是点击事件，更新lastAnnouncementTime并隐藏红点
           if (event?.type === 'click') {
             lastAnnouncementTime.value = latestTime;
             hasNewAnnouncement.value = false;
             showAnnouncementDialog.value = true;
           } else {
-            // 如果是轮询，比较时间来决定是否显示红点
             hasNewAnnouncement.value = !lastAnnouncementTime.value || latestTime > lastAnnouncementTime.value;
           }
+          console.log("用户最后查看的公告时间为:"+lastAnnouncementTime.value +"当前公告最新时间为"+latestTime);
         }
 
       } catch (error) {
@@ -393,7 +391,7 @@ export default {
     // 开始轮询
     function startPolling() {
       pollTimer = setInterval(() => {
-        fetchAnnouncements(); // 不传入事件参数，表示是轮询触发的
+        fetchAnnouncements(); // 不传入事件参，表示是轮询触发的
       }, 10000); // 每10秒轮询一次
     }
 
@@ -613,6 +611,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 10px;
+
   flex: 1;
   max-width: 500px;
 }
