@@ -664,6 +664,17 @@ def like(like,level,cancel,id):
             else: secondaryOrderComment.unhelpful = secondaryOrderComment.unhelpful + 1 
     db.session.commit()   #提交事务
     return True
+
+# 获取一二级订单评价组合结构体
+def getComment(goods_id):
+    orderComments = OrderComment.query.filter_by(goods_id = goods_id).all()
+    data = []
+    for orderComment in orderComments:
+        this = {}
+        this.update(getOrderComment(orderComment.goods_id))
+        this.update({"reply":getSecondaryOrderComment(orderComment.order_comment_id)})
+        data.append(this)
+    return data
 ##################################################### 收藏管理 #######################################################
 # 用户添加收藏
 def addcollection(goods_id,user_id):
