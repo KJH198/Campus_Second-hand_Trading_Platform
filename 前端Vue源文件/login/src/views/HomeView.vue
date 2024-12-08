@@ -368,7 +368,7 @@ export default {
         } else {
           // 如果是轮询触发的，检查是否有新公告
           const hasNew = data.announcements.some(announcement => {
-            return new Date(announcement.deliver_time) > new Date(lastCheckTime.value);
+            return new Date(announcement.date) > new Date(lastCheckTime.value);
           });
           hasNewAnnouncement.value = hasNew;
         }
@@ -558,12 +558,12 @@ export default {
       <div class="announcements-container">
         <div v-if="announcements && announcements.length > 0">
           <div v-for="announcement in announcements" 
-               :key="announcement.announce_id" 
+               :key="announcement.id" 
                class="announcement-item"
           >
             <h3>{{ announcement.title }}</h3>
             <p>{{ announcement.content }}</p>
-            <span class="announcement-date">{{ formatDate(announcement.deliver_time) }}</span>
+            <span class="announcement-date">{{ formatDate(announcement.date) }}</span>
           </div>
         </div>
         <div v-else class="no-announcement">
@@ -903,7 +903,7 @@ export default {
   right: -2px;
   width: 8px;
   height: 8px;
-  background-color: #ff4444;
+  background-color: #44ff6d;
   border-radius: 50%;
   border: 2px solid #fff;
 }
