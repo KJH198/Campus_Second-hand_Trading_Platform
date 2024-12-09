@@ -99,6 +99,8 @@ def user_profile():
     elif type == 'update_address':
         info = {'address_id':data.get('address_id'), 'receiver_name':data.get('receiver_name'), 'phone_number':data.get('phone_number'), 'address':data.get('address')}
         return jsonify({"success":dbTools.reDefineAddress(info)})
+    elif type == 'get_orders':
+        return jsonify({"success":True, "bought_orders":dbTools.getBuyerOrders(data.get('user_id')), "sold_orders":dbTools.getSellerOrders(data.get('user_id'))})
 
 @app.route('/goods_picture_show', methods=['POST'])
 def goods_picture_show():
@@ -129,6 +131,29 @@ def manager():
         return jsonify({"success":dbTools.ban(data.get('user_id'))})
     elif type == 'deban':
         return jsonify({"success":dbTools.unban(data.get('user_id'))})
+    
+@app.route('/order_detail', methods=['POST'])
+def order_detail():
+    type = request.headers.get('type')
+    data = request.get_json()
+    if type == 'get_order_detail':
+        #print({'success':True, 'order_detail':dbTools.getOrderInfo(data.get('goods_id')), 'goods_detail':dbTools.getGoodsInfo(data.get('goods_id'),data.get('user_id'))})
+        return jsonify({'success':True, 'order_detail':dbTools.getOrderInfo(data.get('goods_id')), 'goods_detail':dbTools.getGoodsInfo(data.get('goods_id'),data.get('user_id'))})
+    elif type == 'confirm_delivery':
+        return jsonify({'success':dbTools.dealDown(data.get('goods_id'), True)})
+    elif type == 'request_refund':
+        return jsonify({'success':dbTools.dealDown(data.get('goods_id'), False)})
+    elif type == 'comments':
+        return jsonify(dbTools.getComment(data.get("goods_id")))
+    elif type == 'commit_comment':
+        return jsonify({'success':dbTools.addOrderComment(data.get("goods_id"),data.get("order_grade"),data.get("comment"))})
+    elif type == 'commit_reply':
+        return jsonify({'success':dbTools.addSecondaryOrderComment(data.get('deliver_id'), data.get('order_comment_id'),data.get('comment'))})
+    elif type == 'like':
+        return jsonify({'success':dbTools.like_order_comment(data.get("like"),data.get("level"),data.get("cancel"),data.get("id"))})
+
+    
+    
 
 def begin():
     DB_Initiator.init()
