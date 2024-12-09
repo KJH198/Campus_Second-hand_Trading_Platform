@@ -383,7 +383,7 @@ def searchGoods(info):
 
 # 按类别搜索商品
 def searchGoodsCategory(category):
-    goods = Goods.query.filter_by(category_name=category).all()    
+    goods = Goods.query.filter_by(category_name=category,goods_state = "在售").all()    
     size = len(goods)
     data = []
     for i in range(0,size):
