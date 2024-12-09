@@ -23,6 +23,11 @@ export default {
     const route = useRoute();
     const phone_number = ref(route.query.phone_number);
     const user_id = ref(route.query.user_id);
+    const selectedMessage = ref(null);
+    const replyContent = ref('');
+    const hasNewMessages = ref(false);
+    const showMessagesDialog = ref(false);
+    const messages = ref([]);
     // console.log('Phone number:', phone_number.value);
     console.log("user_id",user_id.value);
 
@@ -240,7 +245,7 @@ export default {
           path: '/profile',
           query: {
             user_id: user_id.value,
-            current_user_id: user_id.value,  // 添��这一行，因为查看自己的个人页面时，current_user_id 就是 user_id
+            current_user_id: user_id.value,  // 添加这一行，因为查看自己的个人页面时，current_user_id 就是 user_id
             phone_number: phone_number.value,
             userAvatar: userAvatar.value
           },
@@ -633,13 +638,24 @@ export default {
       currentPage,
       totalPages,
       handlePageChange,
-      contactUs,  // 添加新函数
+      contactUs,
       announcements,
       hasNewAnnouncement,
       fetchAnnouncements,
       noResultsMessage,
       showAnnouncementDialog,
-      formatDate,  // 添加这一行
+      formatDate,
+      messages,
+      selectedMessage,
+      replyContent,
+      sendReply,
+      formatMessageTime,
+      navigateToUserProfile,
+      hasNewMessages,
+      checkNewMessages,
+      selectMessage,
+      showMessagesDialog,
+      fetchMessages
     };
   },
 };
@@ -761,6 +777,67 @@ export default {
         </div>
         <div v-else class="no-announcement">
           暂时没有新的公告
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- 添加消息对话框 -->
+    <el-dialog
+      v-model="showMessagesDialog"
+      title="我的消息"
+      width="60%"
+    >
+      <div class="messages-container">
+        <div v-if="messages.length > 0" class="messages-list">
+          <div 
+            v-for="message in messages" 
+            :key="message.message_id"
+            class="message-item"
+            :class="{ 
+              'selected': selectedMessage === message,
+              'sent-message': message.type === 'sent',
+              'received-message': message.type === 'received'
+            }"
+            @click="selectMessage(message)"
+          >
+            <div class="message-header">
+              <img 
+                :src="message.type === 'sent' ? message.deliver_picture : message.deliver_picture" 
+                class="sender-avatar" 
+                @click.stop="navigateToUserProfile(message.type === 'sent' ? message.deliver_id : message.deliver_id)"
+                style="cursor: pointer;"
+              />
+              <span class="sender-name">
+                {{ message.type === 'sent' ? 
+                  `发送给: ${message.receiver_name}` : 
+                  `${message.deliver_name}` 
+                }}
+              </span>
+              <span class="message-time">{{ formatMessageTime(message.deliver_time) }}</span>
+            </div>
+            <div class="message-content">{{ message.content }}</div>
+          </div>
+        </div>
+        <div v-else class="no-messages">
+          暂无消息
+        </div>
+        
+        <div v-if="selectedMessage" class="reply-section">
+          <div class="selected-message">
+            <div class="reply-to">
+              回复给: {{ selectedMessage.type === 'sent' ? selectedMessage.deliver_name : selectedMessage.deliver_name }}
+            </div>
+            <el-input
+              v-model="replyContent"
+              type="textarea"
+              :rows="4"
+              placeholder="输入回复内容..."
+            />
+            <div class="reply-actions">
+              <el-button @click="selectedMessage = null">取消回复</el-button>
+              <el-button type="primary" @click="sendReply">发送回复</el-button>
+            </div>
+          </div>
         </div>
       </div>
     </el-dialog>
@@ -1105,6 +1182,100 @@ export default {
 .no-announcement {
   text-align: center;
   padding: 30px;
+  color: #999;
+  font-size: 14px;
+}
+
+.messages-container {
+  display: flex;
+  gap: 20px;
+  height: 500px;
+}
+
+.messages-list {
+  flex: 1;
+  overflow-y: auto;
+  border-right: 1px solid #eee;
+  padding-right: 20px;
+}
+
+.message-item {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.message-item:hover {
+  background-color: #f5f5f5;
+}
+
+.message-item.selected {
+  background-color: #f0f7ff;
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.sender-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.sender-name {
+  font-weight: bold;
+}
+
+.message-time {
+  color: #999;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.message-content {
+  color: #666;
+  line-height: 1.5;
+}
+
+.reply-section {
+  flex: 1;
+  padding: 20px;
+  background: #f8f8f8;
+  border-radius: 8px;
+}
+
+.reply-to {
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.reply-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.sent-message {
+  background-color: #f0f7ff;
+  margin-left: 20px;
+  border-left: 3px solid #409eff;
+}
+
+.received-message {
+  background-color: #fffdc7;
+  margin-right: 20px;
+  border-left: 3px solid #67c23a;
+}
+
+.no-messages {
+  text-align: center;
+  padding: 20px;
   color: #999;
   font-size: 14px;
 }
