@@ -945,47 +945,58 @@ export default {
 </script>
 
 <style scoped>
+
+
 .header {
-  background-color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  position: fixed;
+  background-color: #ff5000;
+  padding: 10px 20px;
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
+  z-index: 100;
+  
+  justify-content: space-between;
+  align-items: center;
+  margin: 0;
 }
 
 .nav-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  height: 60px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
+  width: 100%;
+  margin: 0 auto;
+  justify-content: space-between;
+  height: 40px;
 }
 
 .welcome-text {
-  font-size: 16px;
-  color: #333;
+  color: #fff;
+  font-size: 18px;
+  font-weight: bold;
 }
 
 .user-section {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 15px;
 }
 
 .announcement-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
   padding: 8px;
-  color: #666;
+  background: transparent;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  width: 36px;
+  height: 36px;
 }
 
 .announcement-btn:hover {
-  color: #409EFF;
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .user-profile {
@@ -998,43 +1009,60 @@ export default {
   height: 40px;
   border-radius: 50%;
   cursor: pointer;
-  object-fit: cover;
+  border: 2px solid #fff;
+  display: block;
 }
 
 .dropdown-menu {
   position: absolute;
-  top: 100%;
   right: 0;
-  background: white;
+  top: 100%;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border-radius: 4px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  padding: 5px 0;
-  margin-top: 5px;
-  min-width: 120px;
+  overflow: hidden;
+  min-width: 150px;
+  margin-top: 8px;
+  border: 1px solid #eee;
   z-index: 1001;
+  display: block;
 }
 
 .dropdown-menu button {
   display: block;
   width: 100%;
-  padding: 8px 16px;
-  text-align: left;
-  border: none;
+  padding: 12px 20px;
   background: none;
+  border: none;
+  text-align: left;
   cursor: pointer;
+  font-size: 14px;
   color: #333;
   transition: background-color 0.2s;
 }
 
 .dropdown-menu button:hover {
-  background-color: #f5f7fa;
+  background-color: #f5f5f5;
+}
+
+.dropdown-menu button:not(:last-child) {
+  border-bottom: 1px solid #eee;
+}
+
+.main-content {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 0 20px;
 }
 
 /* 主要内容区域样式 */
 .order-details-view {
   padding-top: 60px;
+  
   min-height: 100vh;
   background-color: #f5f5f5;
+  margin: 0;
+  padding: 0;
 }
 
 /* 商品详情样式 */
@@ -1232,6 +1260,56 @@ export default {
 
 .reply-item:last-child {
   border-bottom: none;
+}
+
+.reply-input-container {
+  margin-top: 10px;
+  padding: 10px;
+  background: #fff;
+  border-radius: 4px;
+}
+
+.reply-textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: vertical;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.reply-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.cancel-btn {
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.submit-btn {
+  padding: 6px 16px;
+  border: none;
+  background: #ff5000;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.submit-btn:hover {
+  background: #ff6a00;
+}
+
+.cancel-btn:hover {
+  color: #666;
 }
 
 /* 响应式设计 */
