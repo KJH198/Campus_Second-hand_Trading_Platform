@@ -757,6 +757,8 @@ def addcollection(goods_id,user_id):
 # 用户取消收藏
 def cancelCollection(goods_id,user_id):
     collection = Collection.query.filter_by(goods_id = goods_id,user_id = user_id).first()
+    goods = Goods.query.filter_by(goods_id = goods_id).first()
+    goods.heat = goods.heat - 1
     db.session.delete(collection)
     db.session.commit()
     return True
