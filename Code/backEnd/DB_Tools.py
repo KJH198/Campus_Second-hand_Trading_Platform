@@ -748,6 +748,8 @@ def addcollection(goods_id,user_id):
         user_id = user_id,
         goods_id = goods_id
     )
+    goods = Goods.query.filter_by(goods_id = goods_id).first()
+    goods.heat = goods.heat + 1
     db.session.add(newCollection)
     db.session.commit()
     return True
