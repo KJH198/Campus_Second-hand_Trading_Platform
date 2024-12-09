@@ -378,13 +378,12 @@ def searchGoods(info):
         with open(picture_local_url,'rb') as file:
             picture_byte_stream = file.read()
         picture = base64.b64encode(picture_byte_stream).decode("ascii")
-        #pictures_list = [first_picture.picture_url]
         data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":picture})
     return data
 
 # 按类别搜索商品
 def searchGoodsCategory(category):
-    goods = Goods.query.filter_by(category_name=category).all()    
+    goods = Goods.query.filter_by(category_name=category,goods_state = "在售").all()    
     size = len(goods)
     data = []
     for i in range(0,size):
@@ -749,6 +748,8 @@ def addcollection(goods_id,user_id):
         user_id = user_id,
         goods_id = goods_id
     )
+    goods = Goods.query.filter_by(goods_id = goods_id).first()
+    goods.heat = goods.heat + 1
     db.session.add(newCollection)
     db.session.commit()
     return True
@@ -756,6 +757,8 @@ def addcollection(goods_id,user_id):
 # 用户取消收藏
 def cancelCollection(goods_id,user_id):
     collection = Collection.query.filter_by(goods_id = goods_id,user_id = user_id).first()
+    goods = Goods.query.filter_by(goods_id = goods_id).first()
+    goods.heat = goods.heat - 1
     db.session.delete(collection)
     db.session.commit()
     return True

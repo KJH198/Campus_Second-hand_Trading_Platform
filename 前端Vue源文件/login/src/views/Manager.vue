@@ -369,7 +369,6 @@ export default {
           ElMessage.error('公告发布失败，请重试');
         }
       } catch (error) {
-        console.error('Error publishing announcement:', error);
         ElMessage.error('发布失败，请稍后重试');
       }
     }
