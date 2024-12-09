@@ -41,12 +41,6 @@ export default {
     let pollTimer = null;
     const showAnnouncementDialog = ref(false);
     const lastAnnouncementTime = ref(null);
-    const showMessagesDialog = ref(false);
-    const messages = ref([]);
-    const selectedMessage = ref(null);
-    const replyContent = ref('');
-    const hasNewMessages = ref(false);
-    let messageCheckTimer = null;
 
     function base64ToBlob(base64) {
       var byteCharacters = atob(base64);
@@ -56,7 +50,7 @@ export default {
       }
       var byteArray = new Uint8Array(byteArrays);
       return new Blob([byteArray], { type: 'image/jpeg' });
-}
+    }
 
     // 计算当前页应该显示的商品
     const paginatedProducts = computed(() => {
@@ -182,6 +176,7 @@ export default {
         if (!response.ok) {
           throw new Error('Failed to fetch search results');
         }
+        
         const data = await response.json();
         
         // 检查返回的商品数组是否为空
@@ -189,6 +184,14 @@ export default {
           filteredProducts.value = [];
           noResultsMessage.value = '抱歉找不到符合您描述要求的商品';
         } else {
+          // 处理每个商品的图片
+          data.goods.forEach(product => {
+            if (product.picture !== null) {
+              // 将 base64 转换为 Blob，并创建临时 URL
+              product.picture = URL.createObjectURL(base64ToBlob(product.picture));
+            }
+          });
+          
           products.value = data.goods;
           filteredProducts.value = data.goods;
           noResultsMessage.value = '';
@@ -231,7 +234,7 @@ export default {
         
         const userData = await response.json();
         
-        // 通过路由导航时传递用户信息
+        // 通过路由导航时��递用户信息
         router.push({
           path: '/profile',
           query: {
@@ -398,7 +401,7 @@ export default {
     function startPolling() {
       pollTimer = setInterval(() => {
         fetchAnnouncements(); // 不传入事件参，表示是轮询触发的
-      }, 5000); // 每5秒轮询一次
+      }, 10000); // 每10秒轮询一次
     }
 
     // 停止轮询
@@ -421,186 +424,16 @@ export default {
       });
     }
 
-    // 查看消息
-    async function viewMessages() {
-      showMessagesDialog.value = true;
-      await fetchMessages();
-      hasNewMessages.value = false; // 清除新消息提示
-    }
-
-    // 获取消息列表
-    async function fetchMessages() {
-      try {
-        const response = await fetch("/home", {
-          method: "POST",
-          headers: {
-            'Content-Type': 'application/json',
-            'type': 'get_messages'
-          },
-          body: JSON.stringify({
-            user_id: user_id.value
-          })
-        });
-
-        if (!response.ok) throw new Error('获取消息失败');
-
-        const data = await response.json();
-        // 处理接收到的消息
-        const receivedMessages = data.received_messages.map(msg => ({
-          message_id: msg.message_id,
-          content: msg.content,
-          deliver_id: msg.deliver_id,
-          receiver_id: msg.receiver_id,
-          deliver_time: msg.deliver_time,  
-          type: 'received',
-          deliver_picture: msg.deliver_picture ? 
-            URL.createObjectURL(base64ToBlob(msg.deliver_picture)) : 
-            defaultAvatar,
-          deliver_name: msg.deliver_name
-        }));
-        
-        // 处理发送的消息
-        const sentMessages = data.sent_messages.map(msg => ({
-          message_id: msg.message_id,
-          content: msg.content,
-          deliver_id: msg.deliver_id,
-          receiver_id: msg.receiver_id,
-          deliver_time: msg.deliver_time,
-          type: 'sent',
-          receiver_picture: msg.receiver_picture ?
-            URL.createObjectURL(base64ToBlob(msg.receiver_picture)) : 
-            defaultAvatar,
-          deliver_picture: msg.deliver_picture ?
-            URL.createObjectURL(base64ToBlob(msg.deliver_picture)) : 
-            defaultAvatar,
-          receiver_name: msg.receiver_name
-        }));
-        
-        // 合并消息并按时间排序
-        messages.value = [...receivedMessages, ...sentMessages].sort((a, b) => 
-          new Date(a.deliver_time) - new Date(b.deliver_time)
-        );
-
-      } catch (error) {
-        console.error('Error fetching messages:', error);
-        ElMessage.error('获取消息失败');
-      }
-    }
-
-    // 检查新消息
-    async function checkNewMessages() {
-      try {
-        const response = await fetch("/home", {
-          method: "POST",
-          headers: {
-            'Content-Type': 'application/json',
-            'type': 'check_new_messages'
-          },
-          body: JSON.stringify({
-            user_id: user_id.value
-          })
-        });
-
-        if (!response.ok) throw new Error('检查新消息失败');
-
-        const data = await response.json();
-        if (data.has_new) {
-          hasNewMessages.value = true;
-        }
-      } catch (error) {
-        console.error('Error checking messages:', error);
-      }
-    }
-
-    // 选择消息
-    function selectMessage(message) {
-      selectedMessage.value = message;
-    }
-
-    // 发送回复
-    async function sendReply() {
-      // 检查是否在回复自己的消息
-      if (selectedMessage.value.type === 'sent') {
-        ElMessage.warning('不能回复自己发送的消息');
-        return;
-      }
-
-      if (!replyContent.value.trim()) {
-        ElMessage.warning('回复内容不能为空');
-        return;
-      }
-
-      try {
-        const response = await fetch("/home", {
-          method: "POST",
-          headers: {
-            'Content-Type': 'application/json',
-            'type': 'send_message'
-          },
-          body: JSON.stringify({
-            deliver_id: user_id.value,
-            receiver_id: selectedMessage.value.deliver_id,
-            content: replyContent.value
-          })
-        });
-
-        if (!response.ok) throw new Error('发送回复失败');
-
-        const data = await response.json();
-        if (data.success) {
-          ElMessage.success('回复发送成功');
-          replyContent.value = ''; // 清空回复内容
-          selectedMessage.value = null; // 清除选中的消息
-          await fetchMessages(); // 重新获取消息列表
-        } else {
-          throw new Error(data.message || '发送回复失败');
-        }
-      } catch (error) {
-        console.error('Error sending reply:', error);
-        ElMessage.error('发送回复失败');
-      }
-    }
-
-    // 格式化消息时间
-    function formatMessageTime(time) {
-      const date = new Date(time);
-      const now = new Date();
-      const diff = now - date;
-      
-      if (diff < 60000) return '刚刚';
-      if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
-      if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
-      
-      return date.toLocaleDateString();
-    }
-
-    // 添加跳转到用户资料页面的方法
-    function navigateToUserProfile(userId) {
-      router.push({
-        path: '/profile',
-        query: {
-          user_id: userId,
-          
-          current_user_id: user_id.value
-        }
-      });
-      showMessagesDialog.value = false; // 关闭消息对话框
-    }
-
     onMounted(() => {
       fetchProducts();
       fetchUserAvatar();
       document.addEventListener('click', closeDropdown);
       fetchAnnouncements(); // 立即获取一次
       startPolling(); // 开始轮询
-      messageCheckTimer = setInterval(checkNewMessages, 5000); // 每5秒检查一次新消息
     });
 
     onUnmounted(() => {
       stopPolling();
-      if (messageCheckTimer) {
-        clearInterval(messageCheckTimer);
-      }
     });
 
     return {
@@ -626,16 +459,6 @@ export default {
       noResultsMessage,
       showAnnouncementDialog,
       formatDate,  // 添加这一行
-      showMessagesDialog,
-      messages,
-      selectedMessage,
-      replyContent,
-      selectMessage,
-      sendReply,
-      formatMessageTime,
-      checkNewMessages,
-      hasNewMessages,
-      navigateToUserProfile  // 添加到返回对象中
     };
   },
 };
@@ -679,10 +502,7 @@ export default {
               class="dropdown-menu"
             >
               <button @click="viewProfile">个人信息</button>
-              <button @click="viewMessages" class="message-btn">
-                我的消息
-                <span v-if="hasNewMessages" class="message-badge"></span>
-              </button>
+              <button @click="viewMessages">我的消息</button>
               <button @click="contactUs">联系我们</button>
             </div>
           </div>
@@ -758,61 +578,6 @@ export default {
         </div>
         <div v-else class="no-announcement">
           暂时没有新的公告
-        </div>
-      </div>
-    </el-dialog>
-
-    <el-dialog
-      v-model="showMessagesDialog"
-      title="我的消息"
-      width="60%"
-    >
-      <div class="messages-container">
-        <div class="messages-list">
-          <div 
-            v-for="message in messages" 
-            :key="message.message_id"
-            class="message-item"
-            :class="{ 
-              'selected': selectedMessage === message,
-              'sent-message': message.type === 'sent',
-              'received-message': message.type === 'received'
-            }"
-            @click="selectMessage(message)"
-          >
-            <div class="message-header">
-              <img 
-                :src="message.deliver_picture" 
-                class="sender-avatar" 
-                @click.stop="navigateToUserProfile(message.type === 'sent' ? message.deliver_id : message.deliver_id)"
-                style="cursor: pointer;"
-              />
-              <span class="sender-name">
-                {{ message.type === 'sent' ? 
-                  `发送给: ${message.receiver_name}` : 
-                  `来自: ${message.deliver_name}` 
-                }}
-              </span>
-              <span class="message-time">{{ formatMessageTime(message.deliver_time) }}</span>
-            </div>
-            <div class="message-content">{{ message.content }}</div>
-          </div>
-        </div>
-        
-        <div v-if="selectedMessage" class="reply-section">
-          <div class="selected-message">
-            <div class="reply-to">回复给: {{ selectedMessage.deliver_name }}</div>
-            <el-input
-              v-model="replyContent"
-              type="textarea"
-              :rows="4"
-              placeholder="输入回复内容..."
-            />
-            <div class="reply-actions">
-              <el-button @click="selectedMessage = null">取消回复</el-button>
-              <el-button type="primary" @click="sendReply">发送回复</el-button>
-            </div>
-          </div>
         </div>
       </div>
     </el-dialog>
@@ -1159,192 +924,5 @@ export default {
   padding: 30px;
   color: #999;
   font-size: 14px;
-}
-
-.messages-container {
-  display: flex;
-  flex-direction: column;
-  height: 400px;
-  overflow-y: auto;
-}
-
-.messages-list {
-  flex: 1;
-  overflow-y: auto;
-}
-
-.message-item {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
-  cursor: pointer;
-}
-
-.message-item:last-child {
-  border-bottom: none;
-}
-
-.message-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 5px;
-}
-
-.sender-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  margin-right: 10px;
-}
-
-.sender-name {
-  font-weight: bold;
-}
-
-.message-time {
-  font-size: 12px;
-  color: #999;
-  margin-left: 10px;
-}
-
-.message-content {
-  margin-top: 5px;
-}
-
-.reply-section {
-  margin-top: 10px;
-}
-
-.selected-message {
-  padding: 10px;
-  border: 1px solid #eee;
-  border-radius: 4px;
-}
-
-.reply-to {
-  font-weight: bold;
-  margin-bottom: 5px;
-}
-
-.reply-actions {
-  margin-top: 10px;
-}
-
-.reply-actions .el-button {
-  margin-right: 10px;
-}
-
-.message-btn {
-  position: relative;
-}
-
-.message-badge {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  width: 8px;
-  height: 8px;
-  background-color: #ff5000;
-  border-radius: 50%;
-}
-
-.messages-container {
-  display: flex;
-  gap: 20px;
-  height: 500px;
-}
-
-.messages-list {
-  flex: 1;
-  overflow-y: auto;
-  border-right: 1px solid #eee;
-  padding-right: 20px;
-}
-
-.message-item {
-  padding: 15px;
-  border-bottom: 1px solid #eee;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.message-item:hover {
-  background-color: #f5f5f5;
-}
-
-.message-item.selected {
-  background-color: #f0f7ff;
-}
-
-.message-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.sender-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-}
-
-.sender-name {
-  font-weight: bold;
-}
-
-.message-time {
-  color: #999;
-  font-size: 12px;
-  margin-left: auto;
-}
-
-.message-content {
-  color: #666;
-  line-height: 1.5;
-}
-
-.reply-section {
-  flex: 1;
-  padding: 20px;
-  background: #f8f8f8;
-  border-radius: 8px;
-}
-
-.reply-to {
-  margin-bottom: 10px;
-  font-weight: bold;
-}
-
-.reply-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.sent-message {
-  background-color: #f0f7ff;
-  margin-left: 20px;
-  border-left: 3px solid #409eff;
-}
-
-.received-message {
-  background-color: #f5f5f5;
-  margin-right: 20px;
-  border-left: 3px solid #67c23a;
-}
-
-.sent-message .sender-name,
-.received-message .sender-name {
-  font-size: 14px;
-  color: #666;
-}
-
-.sent-message .message-content {
-  color: #409eff;
-}
-
-.received-message .message-content {
-  color: #67c23a;
 }
 </style>
