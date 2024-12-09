@@ -5,9 +5,9 @@
         <div class="nav-container">
           <div class="welcome-text">个人信息中心</div>
           <div class="user-section">
-            <button class="announcement-btn" @click="fetchAnnouncements">
+            <!-- <button class="announcement-btn" @click="fetchAnnouncements">
               <el-icon><Bell /></el-icon>
-            </button>
+            </button> -->
             <div class="user-profile">
               <!-- <img 
                 :src="userAvatar" 
@@ -2050,8 +2050,14 @@
 
 .button-group {
   display: flex;
-  gap: 10px;
-  margin-top: 15px;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 20px;
+  padding: 10px 0;
+}
+
+.button-group .el-button {
+  width: 120px;
 }
 
 .chat-btn {

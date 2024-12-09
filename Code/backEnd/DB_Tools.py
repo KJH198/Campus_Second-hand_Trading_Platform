@@ -523,14 +523,22 @@ def sendMessage(deliver_id,receiver_id,content):
 def checkMessage(this_id,other_id):
     data = []
     messages = Message.query.filter_by(deliver_id = this_id,receiver_id = other_id).all()
-    data1 = [{"message_id":message.message_id,"side":"this","content":message.content,
+    data1 = [{"message_id":message.message_id,"receiver_id":message.receiver_id,"picture":getUserPicture(message.deliver_id),"side":"this","content":message.content,
               "deliver_time":message.deliver_time} for message in messages]
     messages = Message.query.filter_by(deliver_id = other_id,receiver_id = this_id).all()
-    data2 = [{"message_id":message.message_id,"side":"other","content":message.content,
+    data2 = [{"message_id":message.message_id,"deliver_id":message.deliver_id,"picture":getUserPicture(message.deliver_id),"side":"other","content":message.content,
               "deliver_time":message.deliver_time} for message in messages]
     data.append(data1)
     data.append(data2)
     return sorted(data,key = lambda i: i['deliver_time'])
+
+def getUserPicture(user_id):
+    user = User.query.filter_by(user_id = user_id).first()
+    picture_url = user.picture_url
+    with open(picturePath + picture_url,'rb') as file:
+        picture_byte_stream = file.read()
+    base64_str = base64.b64encode(picture_byte_stream).decode("ascii")
+    return base64_str
 
 def deleteMessage(user_id,message_id):
     message = Message.query.filter_by(message_id = message_id).first()
@@ -540,6 +548,10 @@ def deleteMessage(user_id,message_id):
         return True
     return False
 
+def getUserName(user_id):
+    user = User.query.filter_by(user_id = user_id).first()
+    return user.user_name
+
 def getReceivedMessage(user_id):
     messages = Message.query.filter_by(receiver_id = user_id).all()
     data = []
@@ -547,8 +559,10 @@ def getReceivedMessage(user_id):
         deliver_id = message.deliver_id
         content = message.content
         deliver_time = message.deliver_time
-        
-        data.append({"deliver_id":deliver_id,"content":content,"deliver_time":deliver_time, "message_id":message.message_id, "receiver_id":user_id})
+        data.append({"deliver_id":deliver_id,"content":content,"deliver_time":deliver_time, 
+                     "message_id":message.message_id, "receiver_id":user_id, 
+                     "deliver_picture":getUserPicture(deliver_id), "receiver_picture":getUserPicture(user_id), 
+                     "deliver_name":getUserName(deliver_id), "receiver_name":getUserName(user_id)})
     return data
 
 def getSentMessage(user_id):
@@ -558,7 +572,10 @@ def getSentMessage(user_id):
         receiver_id = message.receiver_id
         content = message.content
         deliver_time = message.deliver_time
-        data.append({"receiver_id":receiver_id,"content":content,"deliver_time":deliver_time, "message_id":message.message_id, "deliver_id":user_id})
+        data.append({"receiver_id":receiver_id,"content":content,"deliver_time":deliver_time, 
+                     "message_id":message.message_id, "deliver_id":user_id, 
+                     "deliver_picture":getUserPicture(user_id), "receiver_picture":getUserPicture(receiver_id), 
+                     "deliver_name":getUserName(user_id), "receiver_name":getUserName(receiver_id)})
     return data
     
 ############################################## 公告管理 ######################################################################

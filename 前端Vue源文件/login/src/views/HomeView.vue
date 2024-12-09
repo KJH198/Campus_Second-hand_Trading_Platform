@@ -398,7 +398,7 @@ export default {
     function startPolling() {
       pollTimer = setInterval(() => {
         fetchAnnouncements(); // 不传入事件参，表示是轮询触发的
-      }, 10000); // 每10秒轮询一次
+      }, 5000); // 每5秒轮询一次
     }
 
     // 停止轮询
@@ -470,12 +470,15 @@ export default {
           receiver_picture: msg.receiver_picture ?
             URL.createObjectURL(base64ToBlob(msg.receiver_picture)) : 
             defaultAvatar,
+          deliver_picture: msg.deliver_picture ?
+            URL.createObjectURL(base64ToBlob(msg.deliver_picture)) : 
+            defaultAvatar,
           receiver_name: msg.receiver_name
         }));
         
         // 合并消息并按时间排序
         messages.value = [...receivedMessages, ...sentMessages].sort((a, b) => 
-          new Date(b.deliver_time) - new Date(a.deliver_time)
+          new Date(a.deliver_time) - new Date(b.deliver_time)
         );
 
       } catch (error) {
@@ -516,8 +519,14 @@ export default {
 
     // 发送回复
     async function sendReply() {
+      // 检查是否在回复自己的消息
+      if (selectedMessage.value.type === 'sent') {
+        ElMessage.warning('不能回复自己发送的消息');
+        return;
+      }
+
       if (!replyContent.value.trim()) {
-        ElMessage.warning('请输入回复内容');
+        ElMessage.warning('回复内容不能为空');
         return;
       }
 
@@ -540,9 +549,11 @@ export default {
         const data = await response.json();
         if (data.success) {
           ElMessage.success('回复发送成功');
-          replyContent.value = '';
-          selectedMessage.value = null;
-          await fetchMessages(); // 刷新消息列表
+          replyContent.value = ''; // 清空回复内容
+          selectedMessage.value = null; // 清除选中的消息
+          await fetchMessages(); // 重新获取消息列表
+        } else {
+          throw new Error(data.message || '发送回复失败');
         }
       } catch (error) {
         console.error('Error sending reply:', error);
@@ -568,7 +579,9 @@ export default {
       router.push({
         path: '/profile',
         query: {
-          user_id: userId
+          user_id: userId,
+          
+          current_user_id: user_id.value
         }
       });
       showMessagesDialog.value = false; // 关闭消息对话框
@@ -580,7 +593,7 @@ export default {
       document.addEventListener('click', closeDropdown);
       fetchAnnouncements(); // 立即获取一次
       startPolling(); // 开始轮询
-      messageCheckTimer = setInterval(checkNewMessages, 10000); // 每10秒检查一次新消息
+      messageCheckTimer = setInterval(checkNewMessages, 5000); // 每5秒检查一次新消息
     });
 
     onUnmounted(() => {
@@ -771,7 +784,7 @@ export default {
               <img 
                 :src="message.deliver_picture" 
                 class="sender-avatar" 
-                @click.stop="navigateToUserProfile(message.type === 'sent' ? message.receiver_id : message.deliver_id)"
+                @click.stop="navigateToUserProfile(message.type === 'sent' ? message.deliver_id : message.deliver_id)"
                 style="cursor: pointer;"
               />
               <span class="sender-name">
