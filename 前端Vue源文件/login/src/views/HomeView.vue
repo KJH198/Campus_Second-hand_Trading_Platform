@@ -438,6 +438,172 @@ export default {
       });
     }
 
+    // 查看消息
+    async function viewMessages() {
+      showMessagesDialog.value = true;
+      await fetchMessages();
+      hasNewMessages.value = false; // 清除新消息提示
+    }
+
+    // 获取消息列表
+    async function fetchMessages() {
+      try {
+        const response = await fetch("/home", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'get_messages'
+          },
+          body: JSON.stringify({
+            user_id: user_id.value
+          })
+        });
+
+        if (!response.ok) throw new Error('获取消息失败');
+
+        const data = await response.json();
+        // 处理接收到的消息
+        const receivedMessages = data.received_messages.map(msg => ({
+          message_id: msg.message_id,
+          content: msg.content,
+          deliver_id: msg.deliver_id,
+          receiver_id: msg.receiver_id,
+          deliver_time: msg.deliver_time,  
+          type: 'received',
+          deliver_picture: msg.deliver_picture ? 
+            URL.createObjectURL(base64ToBlob(msg.deliver_picture)) : 
+            defaultAvatar,
+          deliver_name: msg.deliver_name
+        }));
+        
+        // 处理发送的消息
+        const sentMessages = data.sent_messages.map(msg => ({
+          message_id: msg.message_id,
+          content: msg.content,
+          deliver_id: msg.deliver_id,
+          receiver_id: msg.receiver_id,
+          deliver_time: msg.deliver_time,
+          type: 'sent',
+          receiver_picture: msg.receiver_picture ?
+            URL.createObjectURL(base64ToBlob(msg.receiver_picture)) : 
+            defaultAvatar,
+          deliver_picture: msg.deliver_picture ?
+            URL.createObjectURL(base64ToBlob(msg.deliver_picture)) : 
+            defaultAvatar,
+          receiver_name: msg.receiver_name
+        }));
+        
+        // 合并消息并按时间排序
+        messages.value = [...receivedMessages, ...sentMessages].sort((a, b) => 
+          new Date(a.deliver_time) - new Date(b.deliver_time)
+        );
+
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+        ElMessage.error('获取消息失败');
+      }
+    }
+
+    // 检查新消息
+    async function checkNewMessages() {
+      try {
+        const response = await fetch("/home", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'check_new_messages'
+          },
+          body: JSON.stringify({
+            user_id: user_id.value
+          })
+        });
+
+        if (!response.ok) throw new Error('检查新消息失败');
+
+        const data = await response.json();
+        if (data.has_new) {
+          hasNewMessages.value = true;
+        }
+      } catch (error) {
+        console.error('Error checking messages:', error);
+      }
+    }
+
+    // 选择消息
+    function selectMessage(message) {
+      selectedMessage.value = message;
+    }
+
+    // 发送回复
+    async function sendReply() {
+      // 检查是否在回复自己的消息
+      if (selectedMessage.value.type === 'sent') {
+        ElMessage.warning('不能回复自己发送的消息');
+        return;
+      }
+
+      if (!replyContent.value.trim()) {
+        ElMessage.warning('回复内容不能为空');
+        return;
+      }
+
+      try {
+        const response = await fetch("/home", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'send_message'
+          },
+          body: JSON.stringify({
+            deliver_id: user_id.value,
+            receiver_id: selectedMessage.value.deliver_id,
+            content: replyContent.value
+          })
+        });
+
+        if (!response.ok) throw new Error('发送回复失败');
+
+        const data = await response.json();
+        if (data.success) {
+          ElMessage.success('回复发送成功');
+          replyContent.value = ''; // 清空回复内容
+          selectedMessage.value = null; // 清除选中的消息
+          await fetchMessages(); // 重新获取消息列表
+        } else {
+          throw new Error(data.message || '发送回复失败');
+        }
+      } catch (error) {
+        
+        ElMessage.error('发送回复失败');
+      }
+    }
+
+    // 格式化消息时间
+    function formatMessageTime(time) {
+      const date = new Date(time);
+      const now = new Date();
+      const diff = now - date;
+      
+      if (diff < 60000) return '刚刚';
+      if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+      if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
+      
+      return date.toLocaleDateString();
+    }
+
+    // 添加跳转到用户资料页面的方法
+    function navigateToUserProfile(userId) {
+      router.push({
+        path: '/profile',
+        query: {
+          user_id: userId,
+          
+          current_user_id: user_id.value
+        }
+      });
+      showMessagesDialog.value = false; // 关闭消息对话框
+    }
+
     onMounted(() => {
       fetchProducts();
       fetchUserAvatar();
