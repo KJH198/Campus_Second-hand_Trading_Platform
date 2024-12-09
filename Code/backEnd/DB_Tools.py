@@ -5,7 +5,7 @@ import base64
 import random
 
 # 自己修改为本地存储图片文件夹的绝对路径 + \\
-picturePath = "C:\\Users\\kjh15\\Desktop\\Project\\picture\\"
+picturePath = "C:\\Users\\kjh15\\Desktop\\Project\\Cloud\\picture\\"
 Default_url = 'default.jpg'
 
 ############################################## 用户管理 ################################################################
