@@ -563,6 +563,17 @@ export default {
       return date.toLocaleDateString();
     }
 
+    // 添加跳转到用户资料页面的方法
+    function navigateToUserProfile(userId) {
+      router.push({
+        path: '/profile',
+        query: {
+          user_id: userId
+        }
+      });
+      showMessagesDialog.value = false; // 关闭消息对话框
+    }
+
     onMounted(() => {
       fetchProducts();
       fetchUserAvatar();
@@ -610,7 +621,8 @@ export default {
       sendReply,
       formatMessageTime,
       checkNewMessages,
-      hasNewMessages
+      hasNewMessages,
+      navigateToUserProfile  // 添加到返回对象中
     };
   },
 };
@@ -756,7 +768,12 @@ export default {
             @click="selectMessage(message)"
           >
             <div class="message-header">
-              <img :src="message.deliver_picture" class="sender-avatar" />
+              <img 
+                :src="message.deliver_picture" 
+                class="sender-avatar" 
+                @click.stop="navigateToUserProfile(message.type === 'sent' ? message.receiver_id : message.deliver_id)"
+                style="cursor: pointer;"
+              />
               <span class="sender-name">
                 {{ message.type === 'sent' ? 
                   `发送给: ${message.receiver_name}` : 
