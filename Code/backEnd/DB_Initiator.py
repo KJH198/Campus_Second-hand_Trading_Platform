@@ -6,9 +6,9 @@ from flask import Flask
 # 创建Flask项目app,定义前端依赖文件路径
 app = Flask(__name__,template_folder='../dist',static_folder='../dist',static_url_path='')
 # 标记使用的MySQL数据库和pymysql接口(自己改本地的数据库密码，默认所有人有一个schema名为buaa)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:BUAA2024Python@localhost/buaa'
+#app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:BUAA2024Python@localhost/buaa'
 # u21373456 改为 u+你的学号,h_db21373456 改为 h_db+你的学号
-#app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://u21373456:Aa453552@120.46.3.97/h_db21373456'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://u21373456:Aa453552@120.46.3.97/h_db21373456'
 # 关闭对模型修改的跟踪，以提高性能
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['DEBUG'] = True
