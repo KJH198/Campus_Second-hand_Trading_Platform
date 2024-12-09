@@ -66,7 +66,17 @@
               <div class="button-group" v-if="isCurrentUser">
                 <el-button type="primary" @click="openEditDialog">编辑信息</el-button>
                 <el-button type="primary" @click="openAddressDialog">查看收货地址</el-button>
+                
               </div>
+              <div class="button-group" v-else>
+                <el-button 
+                   type="primary"
+                   @click="openChatDialog"
+                   class="chat-btn"
+                 >
+                   <el-icon><ChatDotRound /></el-icon>
+                   发送私信
+                </el-button>
               <el-button 
                 v-if="!isCurrentUser"
                 type="danger"
@@ -78,6 +88,7 @@
                 <el-icon><Warning /></el-icon>
                 举报用户
               </el-button>
+            </div>
             </div>
             
           </div>
@@ -126,54 +137,144 @@
             </div>
           </div>
         </div>
-             <!-- 添加收藏商品显示组件 -->
-    <div v-if="isCurrentUser" class="favorites-container">
-      <div class="favorites-section">
-        <h2>我的收藏</h2>
-      <div class="goods-grid">
-        <div v-if="!favorites || favorites.length === 0" class="no-favorites">
-          暂无收藏商品
-        </div>
-        <div 
-          v-else
-          v-for="favorite in paginatedFavorites" 
-          :key="favorite.goods_id" 
-          class="favorite-card"
-          @click="goToGoodsDetails(favorite)"
-        >
-          <div class="favorite-image">
-            <img :src="favorite.picture" :alt="favorite.goods_name" />
+
+
+        <!-- 收藏商品显示组件 -->
+        <div v-if="isCurrentUser" class="favorites-container">
+          <div class="favorites-section">
+            <h2>我的收藏</h2>
+          <div class="goods-grid">
+            <div v-if="!favorites || favorites.length === 0" class="no-favorites">
+              暂无收藏商品
+            </div>
+            <div 
+              v-else
+              v-for="favorite in paginatedFavorites" 
+              :key="favorite.goods_id" 
+              class="favorite-card"
+              @click="goToGoodsDetails(favorite)"
+            >
+              <div class="favorite-image">
+                <img :src="favorite.picture" :alt="favorite.goods_name" />
+              </div>
+              <div class="favorite-info">
+                <h3 class="favorite-name">{{ favorite.goods_name }}</h3>
+                <p class="favorite-price">¥{{ favorite.goods_price }}</p>
+              </div>
+              
+            </div>
+          
+          <!-- 收藏商品分页控件 -->
+          <div class="pagination" v-if="favorites.length > favoritesPageSize">
+            <button 
+              class="page-button"
+              :disabled="favoritesCurrentPage === 1"
+              @click="handleFavoritesPageChange(favoritesCurrentPage - 1)"
+            >
+              上一页
+            </button>
+            <span class="page-info">
+              {{ favoritesCurrentPage }} / {{ favoritesPagesTotal }}
+            </span>
+            <button 
+              class="page-button"
+              :disabled="favoritesCurrentPage === favoritesPagesTotal"
+              @click="handleFavoritesPageChange(favoritesCurrentPage + 1)"
+            >
+              下一页
+              </button>
+            </div>
+            </div>
           </div>
-          <div class="favorite-info">
-            <h3 class="favorite-name">{{ favorite.goods_name }}</h3>
-            <p class="favorite-price">¥{{ favorite.goods_price }}</p>
+        </div>
+
+        
+        <!-- 订单部分 - 移动到这里，在 profile-container 和 favorites-container 之间 -->
+        <div class="orders-section" v-if="isCurrentUser || !isCurrentUser">
+          <div class="section-header">
+            <h2 class="section-title">{{ isCurrentUser ? '我的订单' : '卖家的订单' }}</h2>
           </div>
           
+          <!-- 只有当前用户查看自己的页面时才显示订单类型切换 -->
+          <el-tabs v-model="activeOrderTab" class="order-tabs" v-if="isCurrentUser">
+            <el-tab-pane label="已买到的" name="bought">
+              <div class="orders-grid">
+                <div v-if="!boughtOrders || boughtOrders.length === 0" class="no-orders">
+                  暂无已买到的订单
+                </div>
+                <div v-else v-for="order in boughtOrders" 
+                     :key="order.goods_id" 
+                     class="order-card" 
+                     @click="goToOrderDetails(order)">
+                  <img :src="order.goods_picture" :alt="order.goods_name" class="order-image"/>
+                  <div class="order-info">
+                    <h3>{{ order.goods_name }}</h3>
+                    <div class="order-price">¥{{ order.goods_price }}</div>
+                    <div class="order-status">{{ getOrderStatusText(order.order_state) }}</div>
+                    <div class="order-time">{{ formatTime(order.deal_time) }}</div>
+                    <div class="order-actions">
+                      <el-button 
+                        v-if="order.order_state === '已下单'"
+                        type="primary" 
+                        size="small"
+                        @click.stop="confirmDelivery(order.goods_id)"
+                      >
+                        确认送达
+                      </el-button>
+                      <el-button 
+                        v-if="['已下单', '已送达'].includes(order.order_state)"
+                        type="danger" 
+                        size="small"
+                        @click.stop="requestRefund(order.goods_id)"
+                      >
+                        申请退款
+                      </el-button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </el-tab-pane>
+            
+            <el-tab-pane label="已卖出的" name="sold">
+              <div class="orders-grid">
+                <div v-if="!soldOrders || soldOrders.length === 0" class="no-orders">
+                  暂无已卖出的订单
+                </div>
+                <div v-else v-for="order in soldOrders" 
+                     :key="order.goods_id" 
+                     class="order-card" 
+                     @click="goToOrderDetails(order)">
+                  <img :src="order.goods_picture" :alt="order.goods_name" class="order-image"/>
+                  <div class="order-info">
+                    <h3>{{ order.goods_name }}</h3>
+                    <div class="order-price">¥{{ order.goods_price }}</div>
+                    <div class="order-status">{{ getOrderStatusText(order.order_state) }}</div>
+                    <div class="order-time">{{ formatTime(order.deal_time) }}</div>
+                  </div>
+                </div>
+              </div>
+            </el-tab-pane>
+          </el-tabs>
+
+          <!-- 当其他用户查看卖家页面时，只显示已卖出的订单 -->
+          <div v-else class="orders-grid">
+            <div v-if="!soldOrders || soldOrders.length === 0" class="no-orders">
+              暂无已卖出的订单
+            </div>
+            <div v-else v-for="order in soldOrders" 
+                 :key="order.goods_id" 
+                 class="order-card" 
+                 @click="goToOrderDetails(order)">
+              <img :src="order.goods_picture" :alt="order.goods_name" class="order-image"/>
+              <div class="order-info">
+                <h3>{{ order.goods_name }}</h3>
+                <div class="order-price">¥{{ order.goods_price }}</div>
+                <div class="order-status">{{ getOrderStatusText(order.order_state) }}</div>
+                <div class="order-time">{{ formatTime(order.deal_time) }}</div>
+              </div>
+            </div>
+          </div>
         </div>
-      
-      <!-- 收藏商品分页控件 -->
-      <div class="pagination" v-if="favorites.length > favoritesPageSize">
-        <button 
-          class="page-button"
-          :disabled="favoritesCurrentPage === 1"
-          @click="handleFavoritesPageChange(favoritesCurrentPage - 1)"
-        >
-          上一页
-        </button>
-        <span class="page-info">
-          {{ favoritesCurrentPage }} / {{ favoritesPagesTotal }}
-        </span>
-        <button 
-          class="page-button"
-          :disabled="favoritesCurrentPage === favoritesPagesTotal"
-          @click="handleFavoritesPageChange(favoritesCurrentPage + 1)"
-        >
-          下一页
-          </button>
-        </div>
-        </div>
-      </div>
-    </div>
       </main>
   
       <!-- 系统公告弹窗 -->
@@ -426,79 +527,40 @@
       </template>
     </el-dialog>
 
-    <!-- 订单部分 -->
-    <div class="orders-section">
-      <div class="section-header">
-        <h2 class="section-title">我的订单</h2>
-      </div>
-      
-      <el-tabs v-model="activeOrderTab" class="order-tabs">
-        <el-tab-pane label="已买到的" name="bought">
-          <div class="orders-grid">
-            <div v-if="!boughtOrders || boughtOrders.length === 0" class="no-orders">
-              暂无已买到的订单
-            </div>
-            <div v-else v-for="order in boughtOrders" 
-                 :key="order.goods_id" 
-                 class="order-card" 
-                 @click="goToOrderDetails(order)">
-              <img :src="order.goods_picture" :alt="order.goods_name" class="order-image"/>
-              <div class="order-info">
-                <h3>{{ order.goods_name }}</h3>
-                <div class="order-price">¥{{ order.goods_price }}</div>
-                <div class="order-status">{{ getOrderStatusText(order.order_state) }}</div>
-                <div class="order-time">{{ formatTime(order.deal_time) }}</div>
-                <div class="order-actions">
-                  <el-button 
-                    v-if="order.order_state === '已下单'"
-                    type="primary" 
-                    size="small"
-                    @click.stop="confirmDelivery(order.goods_id)"
-                  >
-                    确认送达
-                  </el-button>
-                  <el-button 
-                    v-if="['已下单', '已送达'].includes(order.order_state)"
-                    type="danger" 
-                    size="small"
-                    @click.stop="requestRefund(order.goods_id)"
-                  >
-                    申请退款
-                  </el-button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </el-tab-pane>
-        
-        <el-tab-pane label="已卖出的" name="sold">
-          <div class="orders-grid">
-            <div v-if="!soldOrders || soldOrders.length === 0" class="no-orders">
-              暂无已卖出的订单
-            </div>
-            <div v-else v-for="order in soldOrders" 
-                 :key="order.goods_id" 
-                 class="order-card" 
-                 @click="goToOrderDetails(order)">
-              <img :src="order.goods_picture" :alt="order.goods_name" class="order-image"/>
-              <div class="order-info">
-                <h3>{{ order.goods_name }}</h3>
-                <div class="order-price">¥{{ order.goods_price }}</div>
-                <div class="order-status">{{ getOrderStatusText(order.order_state) }}</div>
-                <div class="order-time">{{ formatTime(order.deal_time) }}</div>
-              </div>
-            </div>
-          </div>
-        </el-tab-pane>
-      </el-tabs>
-    </div>
+    <!-- 添加私聊对话框 -->
+    <el-dialog
+      v-model="showChatDialog"
+      title="发送私信"
+      width="30%"
+    >
+      <el-form
+        ref="chatFormRef"
+        :model="chatForm"
+        :rules="chatRules"
+      >
+        <el-form-item prop="content">
+          <el-input
+            v-model="chatForm.content"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入要发送的消息..."
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showChatDialog = false">取消</el-button>
+          <el-button type="primary" @click="sendMessage">发送</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </template>
   
   <script>
   import { ref, computed, onMounted, onUnmounted } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { ElMessage, ElMessageBox } from 'element-plus';
-  import { Bell, Camera, Plus, Warning } from '@element-plus/icons-vue';
+  import { Bell, Camera, Plus, Warning, Phone, ChatDotRound } from '@element-plus/icons-vue';
   import defaultAvatar from '@/assets/tubiao.png';
   import { ElImageViewer } from 'element-plus';
   
@@ -509,7 +571,9 @@
       Camera,
       Plus,
       ElImageViewer,
-      Warning
+      Warning,
+      Phone,
+      ChatDotRound
     },
     setup() {
       const route = useRoute();
@@ -549,10 +613,10 @@
         ],
         phone_number: [
           { required: true, message: '请输入手机号', trigger: 'blur' },
-          { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+          { pattern: /[1-9][0-9]*/, message: '请输入正确的手机号', trigger: 'blur' }
         ],
         password: [
-          { min: 6, message: '密码长度不能小于6位', trigger: 'blur' }
+          { min: 3, message: '密码长度不能小于3位', trigger: 'blur' }
         ]
       };
   
@@ -641,7 +705,7 @@
             userForm.value = { ...editForm.value };
             showEditDialog.value = false;
           } else {
-            ElMessage.error(data.message || '更新失败');
+            ElMessage.error(data.message || '更新失败，该手机号已被使用');
           }
         } catch (error) {
           console.error('Error saving changes:', error);
@@ -1473,14 +1537,65 @@
       }
       }
 
+      const showChatDialog = ref(false);
+      const chatForm = ref({
+        content: ''
+      });
+      const chatRules = {
+        content: [
+          { required: true, message: '请输入消息内容', trigger: 'blur' }
+        ]
+      };
+
+      // 打开聊天对话框
+      function openChatDialog() {
+        showChatDialog.value = true;
+      }
+
+      // 发送消息
+      async function sendMessage() {
+        if (!chatForm.value.content.trim()) {
+          ElMessage.warning('请输入消息内容');
+          return;
+        }
+
+        try {
+          const response = await fetch("/user_profile", {
+            method: "POST",
+            headers: {
+              'Content-Type': 'application/json',
+              'type': 'send_message'
+            },
+            body: JSON.stringify({
+              sender_id: route.query.current_user_id,
+              receiver_id: route.query.user_id,
+              content: chatForm.value.content
+            })
+          });
+
+          if (!response.ok) throw new Error('发送失败');
+
+          const data = await response.json();
+          if (data.success) {
+            ElMessage.success('消息发送成功');
+            showChatDialog.value = false;
+            chatForm.value.content = '';
+          } else {
+            ElMessage.error(data.message || '发送失败');
+          }
+        } catch (error) {
+          console.error('Error sending message:', error);
+          ElMessage.error('发送失败，请重试');
+        }
+      }
 
       onMounted(() => {
         fetchUserInfo();
         fetchUserGoods();
         fetchFavorites();
-        if (isCurrentUser.value) {
-          fetchOrders();
-        }
+        
+        fetchOrders();
+        
       });
 
       return {
@@ -1562,7 +1677,12 @@
         getOrderStatusText,
         formatTime,
         confirmDelivery,
-        requestRefund
+        requestRefund,
+        showChatDialog,
+        chatForm,
+        chatRules,
+        openChatDialog,
+        sendMessage
       };
     }
   };
@@ -1932,6 +2052,16 @@
   display: flex;
   gap: 10px;
   margin-top: 15px;
+}
+
+.chat-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.chat-btn .el-icon {
+  font-size: 16px;
 }
 
 .address-header {
