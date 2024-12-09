@@ -254,9 +254,7 @@ export default {
       console.log("查看通知");
     }
 
-    // function viewMessages() {
-    //   console.log("查看消息");
-    // }
+    
 
     // 添加按类别获取商品的函数
     async function fetchProductsByCategory(category) {
