@@ -93,17 +93,17 @@ export default {
         console.log("商品 before URL", data);
         //为每个商品的图片字符流创建URL
         data.goods.forEach(product => {
-          console.log("商品图片", product.picture);
+          // console.log("商品图片", product.picture);
           if (product.picture !== null) {
             product.picture = URL.createObjectURL(base64ToBlob(product.picture));
           }
           //product.picture = URL.createObjectURL(dataURItoBlob(product.picture));
         });
-        console.log("商品 after URL", data);
+        // console.log("商品 after URL", data);
         products.value = data.goods;
         filteredProducts.value = data.goods;
       } catch (error) {
-        console.error("加载商品失败", error);
+        // console.error("加载商品失败", error);
         // 创建包含33个默认商品的数组，使用新的属性名
         const defaultProducts = Array(33).fill().map((_, index) => ({
           ...defaultProduct,
@@ -240,7 +240,7 @@ export default {
           path: '/profile',
           query: {
             user_id: user_id.value,
-            current_user_id: user_id.value,  // 添加这一行，因为查看自己的个人页面时，current_user_id 就是 user_id
+            current_user_id: user_id.value,  // 添��这一行，因为查看自己的个人页面时，current_user_id 就是 user_id
             phone_number: phone_number.value,
             userAvatar: userAvatar.value
           },
@@ -329,7 +329,7 @@ export default {
       }
     }
 
-    // 修改跳转商品页函数
+    // 修改跳转商品页函
     function goToDetails(product) {
       console.log('跳转商品详情，商品数：', product);
       router.push({
@@ -383,18 +383,22 @@ export default {
         console.log("后端返回的公告数据:", data);
         announcements.value = data.announcements;
         
-        // 如果有公告，找出最新的公告时间
-        if (announcements.value && announcements.value.length > 0) {
-          const latestTime = Math.max(...announcements.value.map(a => new Date(a.date).getTime()));
+        // 如果是点击事件，无论是否有公告都显示弹窗
+        if (event?.type === 'click') {
+          showAnnouncementDialog.value = true;
           
-          if (event?.type === 'click') {
+          // 只有在有公告的情况下才更新最新时间和红点状态
+          if (announcements.value && announcements.value.length > 0) {
+            const latestTime = Math.max(...announcements.value.map(a => new Date(a.date).getTime()));
             lastAnnouncementTime.value = latestTime;
             hasNewAnnouncement.value = false;
-            showAnnouncementDialog.value = true;
-          } else {
+          }
+        } else {
+          // 轮询检查时，只在有新公告时更新状态
+          if (announcements.value && announcements.value.length > 0) {
+            const latestTime = Math.max(...announcements.value.map(a => new Date(a.date).getTime()));
             hasNewAnnouncement.value = !lastAnnouncementTime.value || latestTime > lastAnnouncementTime.value;
           }
-          console.log("用户最后查看的公告时间为:"+lastAnnouncementTime.value +"当前公告最新时间为"+latestTime);
         }
 
       } catch (error) {
@@ -402,6 +406,7 @@ export default {
         ElMessage.error('获取公告失败，请重试');
         announcements.value = [];
         
+        // 即使出错也显示弹窗（如果是点击触发的）
         if (event?.type === 'click') {
           showAnnouncementDialog.value = true;
         }
@@ -577,6 +582,7 @@ export default {
       v-model="showAnnouncementDialog"
       title="系统公告"
       width="50%"
+      :before-close="() => showAnnouncementDialog = false"
     >
       <div class="announcements-container">
         <div v-if="announcements && announcements.length > 0">
