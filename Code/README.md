@@ -8,7 +8,8 @@
 - random
 
 ## 数据库 Mysql
-应有一个名为 **buaa** 的 scheme
+本地连接：应有一个名为 **buaa** 的 scheme
+或者连华为云数据库
 
 ## 代码本地化修改
 修改 **DB_Tools.py** 中的本地图片文件存储的绝对路径\
