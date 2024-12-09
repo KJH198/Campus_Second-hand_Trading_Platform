@@ -5,8 +5,8 @@ import base64
 import random
 
 # 自己修改为本地存储图片文件夹的绝对路径 + \\
-picturePath = "E:\\Junior_Autumn\\Database\\Final_Project\\uploads\\"
-Default_url = '0.jpeg'
+picturePath = "C:\\Users\\kjh15\\Desktop\\Project\\Campus_Second-hand_Trading_Platform\\Code\\picture\\"
+Default_url = 'default.jpg'
 
 ############################################## 用户管理 ################################################################
 # 用户注册
@@ -172,7 +172,7 @@ def getBuyerOrders(user_id):
     return data
 
 def getSellerOrders(user_id):
-    goods_list = Goods.query.filter_by(seller_id = user_id,goods_state = '已售出').all()
+    goods_list = Goods.query.filter_by(seller_id = user_id,goods_state = '已送达').all()
     data = []
     if goods_list == None: return data
     for goods in goods_list:
@@ -609,6 +609,8 @@ def buyGoods(goods_id,buyer_id):
         order_state = '已下单',
         deal_time = datetime.now()
     )
+    goods = Goods.query.filter_by(goods_id = goods_id).first()
+    goods.goods_state = '已售出'
     db.session.add(newOrder)
     db.session.commit()
     return True
@@ -618,7 +620,7 @@ def dealDown(goods_id,getIt):
     order = Order.query.filter_by(goods_id = goods_id).first()
     if getIt:
         goods = Goods.query.filter_by(goods_id = goods_id).first()
-        goods.goods_state = '已售出'
+        goods.goods_state = '已送达'
         order.order_state = '已送达'
     else:
         goods = Goods.query.filter_by(goods_id = goods_id).first()
