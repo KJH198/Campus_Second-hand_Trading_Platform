@@ -22,7 +22,7 @@ def register(user_name,phone_number,password):
     return True
 
 # 用户信息修改
-def reDefineUser(info): # user_id, user_name, password, picture, pictureName, other_information
+def reDefineUser(info): # user_id, user_name, password, picture, pictureName, other_information, phone_number
     if (info.get("user_id")): user = User.query.filter_by(user_id = info.get("user_id")).first()
     else: return False
     if (info.get("user_name")): user.user_name = info.get("user_name")
@@ -34,6 +34,14 @@ def reDefineUser(info): # user_id, user_name, password, picture, pictureName, ot
         deleteUserPicture(user.user_id)
         user.picture_url = x
     if (info.get("other_information")): user.other_information = info.get("other_information")
+    if (info.get("phone_number")):
+        user = User.query.filter_by(user_id = info.get("user_id")).first()
+        oldPhone_number = user.phone_number
+        newPhone_number = info.get("phone_number")
+        if oldPhone_number != newPhone_number:
+            user2 = User.query.filter_by(phone_number = newPhone_number).first()
+            if user2 != None: return False
+            user.phone_number = newPhone_number
     db.session.commit()
     return True
 
@@ -164,7 +172,7 @@ def getBuyerOrders(user_id):
     return data
 
 def getSellerOrders(user_id):
-    goods_list = Goods.query.filter_by(seller_id = user_id,goods_state = '已售出').first()
+    goods_list = Goods.query.filter_by(seller_id = user_id,goods_state = '已售出').all()
     data = []
     if goods_list == None: return data
     for goods in goods_list:
@@ -531,6 +539,27 @@ def deleteMessage(user_id,message_id):
         db.session.commit()
         return True
     return False
+
+def getReceivedMessage(user_id):
+    messages = Message.query.filter_by(receiver_id = user_id).all()
+    data = []
+    for message in messages:
+        deliver_id = message.deliver_id
+        content = message.content
+        deliver_time = message.deliver_time
+        
+        data.append({"deliver_id":deliver_id,"content":content,"deliver_time":deliver_time, "message_id":message.message_id, "receiver_id":user_id})
+    return data
+
+def getSentMessage(user_id):
+    messages = Message.query.filter_by(deliver_id = user_id).all()
+    data = []
+    for message in messages:
+        receiver_id = message.receiver_id
+        content = message.content
+        deliver_time = message.deliver_time
+        data.append({"receiver_id":receiver_id,"content":content,"deliver_time":deliver_time, "message_id":message.message_id, "deliver_id":user_id})
+    return data
     
 ############################################## 公告管理 ######################################################################
 def sendAnnouncement(manger_name,title,content):

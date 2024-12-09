@@ -40,6 +40,13 @@ def home():
         return jsonify({"goods":dbTools.searchGoodsCategory(data.get("category_name"))})
     elif type == 'user_info':
         return jsonify({"user_info":dbTools.getUserInfo(data.get("user_id"))})
+    elif type == 'get_messages':
+        return jsonify({"received_messages":dbTools.getReceivedMessage(data.get("user_id")), "sent_messages":dbTools.getSentMessage(data.get("user_id"))})
+    elif type == 'check_new_messages':
+        return jsonify({"has_new":dbTools.getReceivedMessage(data.get("user_id")) != []})
+    elif type == 'send_message':
+        return jsonify({"success":dbTools.sendMessage(data.get("deliver_id"),data.get("receiver_id"),data.get("content"))})
+    
 
 @app.route('/goods_detail', methods=['POST'])
 def goods_detail():
@@ -101,6 +108,8 @@ def user_profile():
         return jsonify({"success":dbTools.reDefineAddress(info)})
     elif type == 'get_orders':
         return jsonify({"success":True, "bought_orders":dbTools.getBuyerOrders(data.get('user_id')), "sold_orders":dbTools.getSellerOrders(data.get('user_id'))})
+    elif type == 'send_message':
+        return jsonify({"success":dbTools.sendMessage(data.get('sender_id'),data.get('receiver_id'),data.get('content'))})
 
 @app.route('/goods_picture_show', methods=['POST'])
 def goods_picture_show():
