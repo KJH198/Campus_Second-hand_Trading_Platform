@@ -254,9 +254,7 @@ export default {
       console.log("查看通知");
     }
 
-    // function viewMessages() {
-    //   console.log("查看消息");
-    // }
+    
 
     // 添加按类别获取商品的函数
     async function fetchProductsByCategory(category) {
@@ -556,7 +554,7 @@ export default {
           throw new Error(data.message || '发送回复失败');
         }
       } catch (error) {
-        console.error('Error sending reply:', error);
+        
         ElMessage.error('发送回复失败');
       }
     }
