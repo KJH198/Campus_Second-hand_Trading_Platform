@@ -22,7 +22,7 @@
               @click.stop
             >
               <button @click="viewProfile">个人信息</button>
-              <button @click="viewNotifications">我的通知</button>
+              
               <button @click="viewMessages">我的消息</button>
               <button @click="contactUs">联系我们</button>
             </div>
