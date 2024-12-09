@@ -374,8 +374,11 @@ def searchGoods(info):
         goods_name = searchedGoods.goods_name
         goods_price = searchedGoods.goods_price
         first_picture = Picture.query.filter_by(goods_id = goods_id).first() # 只获取第一个图片
-        pictures_list = [first_picture.picture_url]
-        data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":pictures_list})
+        picture_local_url = picturePath + first_picture.picture_url
+        with open(picture_local_url,'rb') as file:
+            picture_byte_stream = file.read()
+        picture = base64.b64encode(picture_byte_stream).decode("ascii")
+        data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":picture})
     return data
 
 # 按类别搜索商品
