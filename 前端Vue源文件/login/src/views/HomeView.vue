@@ -197,7 +197,7 @@ export default {
           filteredProducts.value = data.goods;
           noResultsMessage.value = '';
         }
-        console.log("��索结果", data);
+        console.log("搜索结果", data);
       } catch (error) {
         console.error("搜索失败", error);
         noResultsMessage.value = '搜索失败，请稍后重试';
@@ -457,6 +457,7 @@ export default {
       viewNotifications,
       viewMessages,
       userAvatar,
+      fetchProducts,
       fetchProductsByCategory,
       goToDetails,
       paginatedProducts,
@@ -523,6 +524,7 @@ export default {
 
     <main class="main-content">
       <div class="category-buttons">
+        <button @click="fetchProducts">全部商品</button>
         <button @click="fetchProductsByCategory('sport')">体育运动</button>
         <button @click="fetchProductsByCategory('study')">学习用品</button>
         <button @click="fetchProductsByCategory('digital')">电子数码</button>
