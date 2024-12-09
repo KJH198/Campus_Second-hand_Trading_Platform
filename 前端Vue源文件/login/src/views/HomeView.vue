@@ -189,6 +189,7 @@ export default {
             if (product.picture !== null) {
               // 将 base64 转换为 Blob，并创建临时 URL
               product.picture = URL.createObjectURL(base64ToBlob(product.picture));
+              console.log("商品图片", product.picture);
             }
           });
           
@@ -196,7 +197,7 @@ export default {
           filteredProducts.value = data.goods;
           noResultsMessage.value = '';
         }
-        console.log("搜索结果", data);
+        console.log("��索结果", data);
       } catch (error) {
         console.error("搜索失败", error);
         noResultsMessage.value = '搜索失败，请稍后重试';
@@ -234,7 +235,7 @@ export default {
         
         const userData = await response.json();
         
-        // 通过路由导航时��递用户信息
+        // 通过路由导航时递用户信息
         router.push({
           path: '/profile',
           query: {
@@ -261,7 +262,7 @@ export default {
       console.log("查看消息");
     }
 
-    // 添加按类别获取商品的函数
+    // 修改按类别获取商品的函数
     async function fetchProductsByCategory(category) {
       try {
         const response = await fetch("/home", {
@@ -279,8 +280,18 @@ export default {
           throw new Error('Failed to fetch products by category');
         }
         const data = await response.json();
-        products.value = data.products;
-        filteredProducts.value = data.products;
+        
+        // 处理商品图片
+        if (data.goods && data.goods.length > 0) {
+          data.goods.forEach(product => {
+            if (product.picture !== null) {
+              product.picture = URL.createObjectURL(base64ToBlob(product.picture));
+            }
+          });
+        }
+        
+        products.value = data.goods;
+        filteredProducts.value = data.goods;
         currentPage.value = 1;  // 重置页码为第一页
       } catch (error) {
         console.error("加载分类商品失败", error);
@@ -310,7 +321,7 @@ export default {
         const defaultProducts = Array(33).fill().map((_, index) => ({
           ...defaultProduct,
           goods_id: index + 1,
-          picture: defaultImage  // 改为 picture
+          picture: defaultImage
         }));
         products.value = defaultProducts;
         filteredProducts.value = defaultProducts;
