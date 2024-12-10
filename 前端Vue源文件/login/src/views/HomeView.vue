@@ -46,6 +46,7 @@ export default {
     let pollTimer = null;
     const showAnnouncementDialog = ref(false);
     const lastAnnouncementTime = ref(null);
+    const lastViewTime = ref(null);
 
     function base64ToBlob(base64) {
       var byteCharacters = atob(base64);
@@ -69,7 +70,7 @@ export default {
       return Math.ceil(filteredProducts.value.length / pageSize);
     });
 
-    // 修改默认产品对象
+    // 修改认产品对象
     const defaultProduct = {
       goods_id: 0,
       goods_name: "默认商品",
@@ -109,7 +110,7 @@ export default {
         filteredProducts.value = data.goods;
       } catch (error) {
         // console.error("加载商品失败", error);
-        // 创建包含33个默认商品的数组，使用新的属���名
+        // 创建包含33个默认商品的数组，使用新的属性名
         const defaultProducts = Array(33).fill().map((_, index) => ({
           ...defaultProduct,
           goods_id: index + 1
@@ -149,7 +150,7 @@ export default {
         console.log("用户头像", userAvatar);
       } catch (error) {
         console.error("加载用户头像失败", error);
-        // 使用导入的默认图片作为头像
+        // 使���导入的默认图片作为头像
         userAvatar.value = defaultAvatar;
       }
     }
@@ -240,7 +241,7 @@ export default {
         
         const userData = await response.json();
         
-        // 通过路由导航时递用户信息
+        // 通过路由导航时递用户息
         router.push({
           path: '/profile',
           query: {
@@ -328,7 +329,7 @@ export default {
         }));
         products.value = defaultProducts;
         filteredProducts.value = defaultProducts;
-        currentPage.value = 1;  // 在错误处理中也重���页码
+        currentPage.value = 1;  // 在错处理中也重置页码
       }
     }
 
@@ -391,21 +392,51 @@ export default {
         console.log("后端返回的公告数据:", data);
         announcements.value = data.announcements;
         
-        // 如果是点击事件，无论是否有公告都显示弹窗
+        // 如果是点击事件触发
         if (event?.type === 'click') {
           showAnnouncementDialog.value = true;
           
-          // 只有在有公告的情况下才更新最新时间和红点状态
+          // 只有在有公告的情况下才更新时间
           if (announcements.value && announcements.value.length > 0) {
             const latestTime = Math.max(...announcements.value.map(a => new Date(a.date).getTime()));
-            lastAnnouncementTime.value = latestTime;
-            hasNewAnnouncement.value = false;
+            
+            // 如果最新公告时间晚于上次查看时间，则更新用户的最后查看时间
+            if (!lastViewTime.value || latestTime > lastViewTime.value.getTime()) {
+              try {
+                const updateResponse = await fetch("/home", {
+                  method: "POST",
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'type': 'newlooktime'
+                  },
+                  body: JSON.stringify({
+                    user_id: user_id.value,
+                    newlooktime: new Date(latestTime).toISOString()
+                  })
+                });
+
+                if (!updateResponse.ok) {
+                  throw new Error('更新查看时间失败');
+                }
+
+                const updateData = await updateResponse.json();
+                if (updateData.success) {
+                  // 更新成功后，更新本地存储的最后查看时间
+                  lastViewTime.value = new Date(latestTime);
+                  hasNewAnnouncement.value = false;
+                } else {
+                  throw new Error('更新查看时间失败');
+                }
+              } catch (error) {
+                console.error("更新查看时间失败:", error);
+              }
+            }
           }
-        } else {
-          // 轮询检查时，只在有新公告时更新状态
+        } else if (lastViewTime.value) { // 轮询检查时
+          // 根据上次查看时间判断是否有新公告
           if (announcements.value && announcements.value.length > 0) {
             const latestTime = Math.max(...announcements.value.map(a => new Date(a.date).getTime()));
-            hasNewAnnouncement.value = !lastAnnouncementTime.value || latestTime > lastAnnouncementTime.value;
+            hasNewAnnouncement.value = latestTime > lastViewTime.value.getTime();
           }
         }
 
@@ -414,7 +445,6 @@ export default {
         ElMessage.error('获取公告失败，请重试');
         announcements.value = [];
         
-        // 即使出错也显示弹窗（如果是点击触发的）
         if (event?.type === 'click') {
           showAnnouncementDialog.value = true;
         }
@@ -539,7 +569,7 @@ export default {
       }
     }
 
-    // 选择消息
+    // 选择息
     function selectMessage(message) {
       selectedMessage.value = message;
     }
@@ -614,10 +644,45 @@ export default {
       showMessagesDialog.value = false; // 关闭消息对话框
     }
 
+    // 添加获取用户上次查看公告时间的函数
+    async function fetchLastViewTime() {
+      try {
+        const response = await fetch("/home", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'type': 'looktime'
+          },
+          body: JSON.stringify({
+            user_id: user_id.value
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('获上次查看时间失败');
+        }
+
+        const data = await response.json();
+        lastViewTime.value = new Date(data.looktime);
+        
+        // 获取到上次查看时间后，检查是否有新公告
+        if (announcements.value && announcements.value.length > 0) {
+          const latestAnnouncementTime = Math.max(
+            ...announcements.value.map(a => new Date(a.date).getTime())
+          );
+          hasNewAnnouncement.value = latestAnnouncementTime > lastViewTime.value.getTime();
+        }
+      } catch (error) {
+        console.error("获取上次查看时间失败:", error);
+        lastViewTime.value = new Date(0); // 如果获取失败，设置为很早的时间
+      }
+    }
+
     onMounted(() => {
       fetchProducts();
       fetchUserAvatar();
       document.addEventListener('click', closeDropdown);
+      fetchLastViewTime(); // 添加这行
       fetchAnnouncements(); // 立即获取一次
       startPolling(); // 开始轮询
     });
@@ -660,7 +725,9 @@ export default {
       checkNewMessages,
       selectMessage,
       showMessagesDialog,
-      fetchMessages
+      fetchMessages,
+      lastViewTime,
+      fetchLastViewTime,
     };
   },
 };
