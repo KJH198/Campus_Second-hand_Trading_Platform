@@ -1,93 +1,88 @@
 <template>
   <div class="contact-us">
-    <header class="header">
+    <header class="nav-header">
       <div class="nav-container">
-        <div class="welcome-text">联系我们</div>
+        <button class="back-btn" @click="goBack">
+          <el-icon><ArrowLeft /></el-icon>
+          返回
+        </button>
+        <h1 class="nav-title">本站管理员</h1>
       </div>
     </header>
 
-    <main class="main-content">
-      <el-card class="contact-card">
-        <h2>联系方式</h2>
-        <div class="contact-info">
-          <div class="info-item">
-            <el-icon><Message /></el-icon>
-            <span>邮箱：support@example.com</span>
-          </div>
-          <div class="info-item">
-            <el-icon><Phone /></el-icon>
-            <span>电话：123-456-7890</span>
-          </div>
-          <div class="info-item">
-            <el-icon><Location /></el-icon>
-            <span>地址：北京市海淀区学院路37号‌</span>
-          </div>
+    <div class="admin-cards">
+      <div class="admin-card" v-for="admin in admins" :key="admin.name">
+        <div class="admin-avatar">
+          <img :src="admin.avatar" :alt="admin.name">
         </div>
-
-        <div class="feedback-section">
-          <h3>意见反馈</h3>
-          <el-form :model="feedbackForm" ref="feedbackFormRef">
-            <el-form-item>
-              <el-input
-                v-model="feedbackForm.content"
-                type="textarea"
-                rows="4"
-                placeholder="请输入您的宝贵意见或建议..."
-              />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="submitFeedback">
-                提交反馈
-              </el-button>
-            </el-form-item>
-          </el-form>
+        <div class="admin-info">
+          <h2>{{ admin.name }}</h2>
+          <p><el-icon><Message /></el-icon> {{ admin.email }}</p>
+          <p><el-icon><Phone /></el-icon> {{ admin.phone }}</p>
+          <p class="responsibility">
+            <el-icon><Management /></el-icon> 
+            <span>{{ admin.responsibility }}</span>
+          </p>
         </div>
-      </el-card>
-    </main>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { ref } from 'vue';
-import { Message, Phone, Location } from '@element-plus/icons-vue';
-import { ElMessage } from 'element-plus';
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { ArrowLeft, Message, Phone, Management } from '@element-plus/icons-vue'
+import KJHAvatar from '@/assets/KJH.jpg'
+import StaCivaFoxAvatar from '@/assets/StaCivaFox.jpg'
+import FandaAvatar from '@/assets/Fanda.jpg'
 
 export default {
   name: 'ContactUs',
   components: {
+    ArrowLeft,
     Message,
     Phone,
-    Location
+    Management
   },
   setup() {
-    const feedbackForm = ref({
-      content: ''
-    });
-    const feedbackFormRef = ref(null);
+    const router = useRouter()
+    const route = useRoute()
 
-    const submitFeedback = async () => {
-      if (!feedbackForm.value.content.trim()) {
-        ElMessage.warning('请输入反馈内容');
-        return;
+    const admins = ref([
+      {
+        name: 'KJH',
+        avatar: KJHAvatar,
+        email: 'kjh@admin.com',
+        phone: '123-4567-8901',
+        responsibility: '用户管理与系统维护'
+      },
+      {
+        name: 'StaCivaFox',
+        avatar: StaCivaFoxAvatar,
+        email: 'stacivafox@admin.com',
+        phone: '123-4567-8902',
+        responsibility: '商品审核与交易管理'
+      },
+      {
+        name: 'Fanda',
+        avatar: FandaAvatar,
+        email: 'fanda@admin.com',
+        phone: '123-4567-8903',
+        responsibility: '投诉处理与平台运营'
       }
+    ])
 
-      try {
-        // 这里可以添加提交反馈的接口请求
-        ElMessage.success('反馈提交成功！');
-        feedbackForm.value.content = '';
-      } catch (error) {
-        console.error('提交反馈失败:', error);
-        ElMessage.error('提交失败，请重试');
-      }
-    };
+    const goBack = () => {
+      router.go(-1)
+    }
 
     return {
-      feedbackForm,
-      feedbackFormRef,
-      submitFeedback
-    };
+      admins,
+      goBack
+    }
   }
-};
+}
 </script>
 
 <style scoped>
@@ -96,80 +91,132 @@ export default {
   background-color: #f5f5f5;
 }
 
-.header {
+.nav-header {
   background-color: #ff5000;
-  padding: 10px 20px;
+  padding: 15px 20px;
   position: sticky;
   top: 0;
   z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .nav-container {
+  max-width: 1200px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
+  position: relative;
+}
+
+.nav-title {
+  color: white;
+  margin: 0;
+  flex: 1;
+  text-align: center;
+  font-size: 1.5em;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.back-btn:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.admin-cards {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+  padding: 40px 20px;
   max-width: 1200px;
   margin: 0 auto;
 }
 
-.welcome-text {
-  color: white;
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.main-content {
-  max-width: 800px;
-  margin: 40px auto;
-  padding: 0 20px;
-}
-
-.contact-card {
+.admin-card {
   background: white;
-  border-radius: 8px;
-  padding: 20px;
+  border-radius: 15px;
+  padding: 30px;
+  width: 300px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-top: 4px solid #ff5000;
 }
 
-.contact-card h2 {
-  margin: 0 0 20px;
-  color: #333;
-  font-size: 24px;
+.admin-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
-.contact-info {
-  margin-bottom: 30px;
+.admin-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 60px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  border: 3px solid #ff5000;
+  box-shadow: 0 4px 10px rgba(255, 80, 0, 0.2);
 }
 
-.info-item {
+.admin-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-info {
+  text-align: center;
+  width: 100%;
+}
+
+.admin-info h2 {
+  color: #ff5000;
+  margin: 0 0 15px 0;
+  font-size: 1.5em;
+}
+
+.admin-info p {
+  color: #666;
+  margin: 8px 0;
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
-  font-size: 16px;
-  color: #666;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.3s;
 }
 
-.info-item .el-icon {
-  font-size: 20px;
+.admin-info p:hover {
+  background-color: #fff5f0;
+}
+
+.admin-info .el-icon {
   color: #ff5000;
+  font-size: 1.2em;
 }
 
-.feedback-section {
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid #eee;
+.responsibility {
+  background-color: #fff5f0;
+  border: 1px solid #ffe0d0;
+  margin-top: 15px !important;
 }
 
-.feedback-section h3 {
-  margin: 0 0 20px;
-  color: #333;
-  font-size: 18px;
-}
-
-.el-form-item {
-  margin-bottom: 20px;
-}
-
-.el-button {
-  width: 100%;
+.responsibility span {
+  color: #ff5000;
+  font-weight: 500;
 }
 </style> 

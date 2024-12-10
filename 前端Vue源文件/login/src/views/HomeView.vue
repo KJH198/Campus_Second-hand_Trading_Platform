@@ -70,7 +70,7 @@ export default {
       return Math.ceil(filteredProducts.value.length / pageSize);
     });
 
-    // 修改认产品对象
+    // 修改���产品对象
     const defaultProduct = {
       goods_id: 0,
       goods_name: "默认商品",
@@ -150,7 +150,7 @@ export default {
         console.log("用户头像", userAvatar);
       } catch (error) {
         console.error("加载用户头像失败", error);
-        // 使���导入的默认图片作为头像
+        // 使用导入的默认图片作为头像
         userAvatar.value = defaultAvatar;
       }
     }
@@ -285,7 +285,7 @@ export default {
         }
         const data = await response.json();
         
-        // 处理商品图片
+        // 处理商���图片
         if (data.goods && data.goods.length > 0) {
           data.goods.forEach(product => {
             if (product.picture !== null) {
@@ -368,7 +368,9 @@ export default {
       router.push({ 
         name: 'ContactUs',
         query: {
-          from: 'home'  // 标记来源为主页
+          phone_number: phone_number.value,
+          user_id: user_id.value,
+          userAvatar: userAvatar.value
         }
       });
     }
@@ -574,7 +576,7 @@ export default {
       selectedMessage.value = message;
     }
 
-    // 发送回复
+    // 发送回���
     async function sendReply() {
       // 检查是否在回复自己的消息
       if (selectedMessage.value.type === 'sent') {
