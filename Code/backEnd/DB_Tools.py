@@ -47,7 +47,7 @@ def reDefineUser(info): # user_id, user_name, password, picture, pictureName, ot
     return True
 
 def getUserLookTime(user_id):
-    user = User.query.filter_by(user_id == user_id).first()
+    user = User.query.filter_by(user_id = user_id).first()
     return user.last_look
 
 # 生成图片URL
