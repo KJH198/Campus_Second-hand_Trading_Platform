@@ -23,7 +23,7 @@ def register(user_name,phone_number,password):
     return True
 
 # 用户信息修改
-def reDefineUser(info): # user_id, user_name, password, picture, pictureName, other_information, phone_number
+def reDefineUser(info): # user_id, user_name, password, picture, pictureName, other_information, phone_number, last_look
     if (info.get("user_id")): user = User.query.filter_by(user_id = info.get("user_id")).first()
     else: return False
     if (info.get("user_name")): user.user_name = info.get("user_name")
@@ -36,13 +36,13 @@ def reDefineUser(info): # user_id, user_name, password, picture, pictureName, ot
         user.picture_url = x
     if (info.get("other_information")): user.other_information = info.get("other_information")
     if (info.get("phone_number")):
-        user = User.query.filter_by(user_id = info.get("user_id")).first()
         oldPhone_number = user.phone_number
         newPhone_number = info.get("phone_number")
         if oldPhone_number != newPhone_number:
             user2 = User.query.filter_by(phone_number = newPhone_number).first()
             if user2 != None: return False
             user.phone_number = newPhone_number
+    if (info.get("last_look")): user.last_look = info.get("last_look")
     db.session.commit()
     return True
 
@@ -126,9 +126,10 @@ def getUserInfo(user_id):
     base64_str = base64.b64encode(picture_byte_stream).decode("ascii")
     other_information = user.other_information
     isbanned = user.isbanned
+    last_look = user.last_look
     return {"success":True, "phone_number":phone_number,"user_name":user_name,
             "password":password,"picture_url":base64_str,"other_information":other_information,
-            "isbanned":isbanned}
+            "isbanned":isbanned,"last_look":last_look}
 
 #获取用户发布的商品
 def getUserGoods(user_id):
@@ -642,7 +643,6 @@ def getOrderInfo(goods_id):
     buyer_id = order.buyer_id
     order_state = order.order_state
     deal_time = order.deal_time
-    print(buyer_id,order_state,deal_time)
     return {"buyer_id":buyer_id,"order_state":order_state,"deal_time":deal_time}
 
 # 添加订单评价
@@ -871,7 +871,6 @@ def getAddress(user_id):
 
 # 删除地址
 def deleteAddress(address_id):
-    print("address_id:", address_id)
     address = Address.query.filter_by(address_id = address_id).first()
     db.session.delete(address)
     db.session.commit()
@@ -879,7 +878,6 @@ def deleteAddress(address_id):
 
 # 修改地址
 def reDefineAddress(info): # address_id,receiver_name,phone_number,address
-    print(info)
     if (info.get("address_id")): address = Address.query.filter_by(address_id = info.get("address_id")).first()
     else: return False
     if (info.get("receiver_name")): address.receiver_name = info.get("receiver_name")
