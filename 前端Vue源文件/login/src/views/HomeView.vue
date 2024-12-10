@@ -663,6 +663,7 @@ export default {
         }
 
         const data = await response.json();
+        console.log("后端返回的上次查看时间数据:", data.looktime);
         lastViewTime.value = new Date(data.looktime);
         
         // 获取到上次查看时间后，检查是否有新公告
@@ -673,7 +674,7 @@ export default {
           hasNewAnnouncement.value = latestAnnouncementTime > lastViewTime.value.getTime();
         }
       } catch (error) {
-        console.error("获取上次查看时间失败:", error);
+        console.error("获取上次查看时间失败:错误如下", error);
         lastViewTime.value = new Date(0); // 如果获取失败，设置为很早的时间
       }
     }
