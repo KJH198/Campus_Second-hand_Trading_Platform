@@ -588,7 +588,7 @@ export default {
     }
 
     function contactUs() {
-      console.log("联系我们");
+      router.push({ name: 'ContactUs' });
     }
 
     // 获取公告

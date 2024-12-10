@@ -4,6 +4,7 @@ import Login from '../views/Login.vue'
 import GoodDetails from '../views/GoodDetails.vue'
 import UserProfile from '../views/UserProfile.vue'
 import Manager from '../views/Manager.vue'
+import ContactUs from '../views/ContactUs.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -37,6 +38,11 @@ const router = createRouter({
       path: '/order/:orderId',
       name: 'OrderDetails',
       component: () => import('../views/OrderDetails.vue')
+    },
+    {
+      path: '/contact',
+      name: 'ContactUs',
+      component: ContactUs
     }
   ]
 })

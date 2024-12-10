@@ -240,7 +240,7 @@ export default {
           path: '/profile',
           query: {
             user_id: user_id.value,
-            current_user_id: user_id.value,  // 添��这一行，因为查看自己的个人页面时，current_user_id 就是 user_id
+            current_user_id: user_id.value,  // 添加这一行，因为查看自己的个人页面时，current_user_id 就是 user_id
             phone_number: phone_number.value,
             userAvatar: userAvatar.value
           },
@@ -361,7 +361,7 @@ export default {
 
     // 在 setup 函数中添加新的处理函数
     function contactUs() {
-      console.log("联系我们");
+      router.push({ name: 'ContactUs' });
     }
 
     // 获取公告函数
