@@ -20,7 +20,7 @@
           </div>
           <div class="info-item">
             <el-icon><Location /></el-icon>
-            <span>地址：北京市海淀区XX路XX号</span>
+            <span>地址：北京市海淀区学院路37号‌</span>
           </div>
         </div>
 

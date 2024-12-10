@@ -588,7 +588,13 @@ export default {
     }
 
     function contactUs() {
-      router.push({ name: 'ContactUs' });
+      router.push({ 
+        name: 'ContactUs',
+        query: {
+          from: 'goods',
+          ...route.query  // 保留所有原有的查询参数
+        }
+      });
     }
 
     // 获取公告
@@ -1061,7 +1067,7 @@ export default {
 
       // 如果已经点赞，不允许点踩
       if (currentAction === 'like') {
-        ElMessage.warning('您已经点过赞了，如需点踩请先取消点赞');
+        ElMessage.warning('您已经���过赞了，如需点踩请先取消点赞');
         return;
       }
 

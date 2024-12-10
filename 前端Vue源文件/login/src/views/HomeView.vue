@@ -109,7 +109,7 @@ export default {
         filteredProducts.value = data.goods;
       } catch (error) {
         // console.error("加载商品失败", error);
-        // 创建包含33个默认商品的数组，使用新的属性名
+        // 创建包含33个默认商品的数组，使用新的属���名
         const defaultProducts = Array(33).fill().map((_, index) => ({
           ...defaultProduct,
           goods_id: index + 1
@@ -158,7 +158,7 @@ export default {
      * 搜索商品
      * data{
      * products[]
-     * }
+     * 
      */
     async function handleSearch() {
       if (!searchQuery.value.trim()) {
@@ -328,7 +328,7 @@ export default {
         }));
         products.value = defaultProducts;
         filteredProducts.value = defaultProducts;
-        currentPage.value = 1;  // 在错误处理中也重置页码
+        currentPage.value = 1;  // 在错误处理中也重���页码
       }
     }
 
@@ -364,7 +364,12 @@ export default {
 
     // 在 setup 函数中添加新的处理函数
     function contactUs() {
-      router.push({ name: 'ContactUs' });
+      router.push({ 
+        name: 'ContactUs',
+        query: {
+          from: 'home'  // 标记来源为主页
+        }
+      });
     }
 
     // 获取公告函数
