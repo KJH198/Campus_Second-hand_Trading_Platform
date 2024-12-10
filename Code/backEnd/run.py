@@ -34,6 +34,10 @@ def home():
         picture_url = dbTools.getUserPictureURL(data.get("user_id"))
         fileType = dbTools.getFileType(picture_url)
         return send_file(picture_url, fileType)
+    elif type == 'looktime':
+        return jsonify({'looktime':dbTools.getUserLookTime(data.get('user_id'))})
+    elif type == 'newlooktime':
+        return jsonify({"success":dbTools.reDefineUser({"user_id":data.get('user_id'),"last_look":data.get('newlooktime')})})
     elif type == 'search':
         return jsonify({"goods":dbTools.searchGoods(data.get("query"))})
     elif type == 'category_search':

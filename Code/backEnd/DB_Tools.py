@@ -46,6 +46,10 @@ def reDefineUser(info): # user_id, user_name, password, picture, pictureName, ot
     db.session.commit()
     return True
 
+def getUserLookTime(user_id):
+    user = User.query.filter_by(user_id == user_id).first()
+    return user.last_look
+
 # 生成图片URL
 def urlGenerator(binaryPicture,pictureName):
     global picturePath
