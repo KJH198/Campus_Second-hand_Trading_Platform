@@ -17,7 +17,7 @@ export default {
     ElIcon,
     Search,
     ElDialog,
-    Bell,
+    Bell
   },
   setup() {
     const route = useRoute();

@@ -5,9 +5,9 @@
         <div class="welcome-text">欢迎使用二手交易平台</div>
         
         <div class="user-section">
-          <button class="announcement-btn" @click="fetchAnnouncements">
+          <!-- <button class="announcement-btn" @click="fetchAnnouncements">
             <el-icon><Bell /></el-icon>
-          </button>
+          </button> -->
           
           <div class="user-profile">
             <img 
@@ -23,7 +23,7 @@
             >
               <button @click="viewProfile">个人信息</button>
               
-              <button @click="viewMessages">我的消息</button>
+              <!-- <button @click="viewMessages">我的消息</button> -->
               <button @click="contactUs">联系我们</button>
             </div>
           </div>
