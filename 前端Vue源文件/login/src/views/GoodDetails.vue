@@ -10,12 +10,12 @@
           </button> -->
           
           <div class="user-profile">
-            <img 
+            <!-- <img 
               :src="userAvatar" 
               alt="用户头像" 
               class="avatar" 
               @click.stop="toggleDropdown"
-            />
+            /> -->
             <div 
               v-show="dropdownVisible" 
               class="dropdown-menu"
