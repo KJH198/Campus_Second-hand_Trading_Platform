@@ -26,6 +26,7 @@ class User(db.Model):
     picture_url = db.Column(db.String(200), nullable=False)  # 可空
     other_information = db.Column(db.Text, nullable=True)  # 可空
     isbanned = db.Column(db.Boolean, nullable=False) 
+    last_look = db.Column(db.DateTime, nullable=True) # 最后一次看公告的时间
 
 # 管理员表
 class Manager(db.Model):  # 注意这里继承了 db.Model

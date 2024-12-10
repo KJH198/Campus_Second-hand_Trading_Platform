@@ -6,17 +6,17 @@
         <div class="welcome-text">欢迎使用二手交易平台</div>
         
         <div class="user-section">
-          <button class="announcement-btn" @click="fetchAnnouncements">
+          <!-- <button class="announcement-btn" @click="fetchAnnouncements">
             <el-icon><Bell /></el-icon>
-          </button>
+          </button> -->
           
           <div class="user-profile" @click.stop>
-            <img 
+            <!-- <img 
               :src="userAvatar" 
               alt="用户头像" 
               class="avatar" 
               @click="toggleDropdown"
-            />
+            /> -->
             <div 
               v-if="dropdownVisible" 
               class="dropdown-menu"
@@ -47,7 +47,10 @@
         <div class="deal-time">下单时间：{{ formatTime(orderDetail?.deal_time) }}</div>
         <div class="seller-info">
           <img :src="sellerPicture" alt="卖家头像" class="seller-avatar" />
-          <el-button type="text" @click="contactSeller">联系卖家</el-button>
+          <button class="contact-btn" @click="contactSeller">
+            <el-icon><Phone /></el-icon>
+            <span>联系卖家</span>
+          </button>
         </div>
         
         <!-- 订单状态和操作按钮 -->
@@ -206,11 +209,15 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import defaultAvatar from '@/assets/tubiao.png'; // 导入默认头像图片
-import { Bell, Camera, Plus, Warning } from '@element-plus/icons-vue';
+import { Bell, Camera, Plus, Warning, Phone } from '@element-plus/icons-vue';
 
 import { ElImageViewer } from 'element-plus';
 
 export default {
+  components: {
+    Bell,
+    Phone
+  },
   setup() {
     const route = useRoute();
     const router = useRouter();
@@ -1398,5 +1405,46 @@ export default {
 :deep(.el-rate__text) {
   font-size: 14px;
   color: #ff9900;
+}
+
+.contact-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #ff6a00, #ff5000);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(255, 80, 0, 0.2);
+  margin-top: 8px;
+}
+
+.contact-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 80, 0, 0.3);
+  background: linear-gradient(135deg, #ff7a00, #ff6000);
+}
+
+.contact-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(255, 80, 0, 0.2);
+}
+
+.contact-btn .el-icon {
+  font-size: 18px;
+  animation: swing 1s ease-in-out infinite;
+}
+
+@keyframes swing {
+  0%, 100% { transform: rotate(-10deg); }
+  50% { transform: rotate(10deg); }
+}
+
+.contact-btn span {
+  font-size: 14px;
 }
 </style> 
