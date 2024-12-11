@@ -110,7 +110,7 @@ export default {
         filteredProducts.value = data.goods;
       } catch (error) {
         // console.error("加载商品失败", error);
-        // 创建包��33个默认商品的数组，使用新的属性名
+        // 创建包33个默认商品的数组，使用新的属性名
         const defaultProducts = Array(33).fill().map((_, index) => ({
           ...defaultProduct,
           goods_id: index + 1
@@ -150,7 +150,7 @@ export default {
         console.log("用户头像", userAvatar);
       } catch (error) {
         console.error("加载用户头像失", error);
-        // 使用导入的默认图片作为��像
+        // 使用导入的默认图片作为像
         userAvatar.value = defaultAvatar;
       }
     }
@@ -222,42 +222,38 @@ export default {
       }
     }
 
+    // 修改个人信息跳转函数
     async function viewProfile() {
       try {
-        // 获取用户信息
-        const response = await fetch("/home", {
-          method: "POST",
-          headers: {
-            'Content-Type': 'application/json',
-            'type': "user_info"
-          },
-          body: JSON.stringify({
-            phone_number: phone_number.value,
-            user_id: user_id.value
-          })
-        });
+        // 构建查询参数
+        const queryParams = new URLSearchParams({
+          phone_number: phone_number.value,
+          user_id: user_id.value,
+          current_user_id: user_id.value,
+          userAvatar: userAvatar.value,
+          redirect: '/profile' // 添加重定向参数
+        }).toString();
 
-        if (!response.ok) throw new Error('获取用户信息失败');
-        
-        const userData = await response.json();
-        
-        // 通过路由导航时递用户息
-        router.push({
-          path: '/profile',
-          query: {
-            user_id: user_id.value,
-            current_user_id: user_id.value,  // 添加这一行，因为查看自己的个人页面时，current_user_id 就是 user_id
-            phone_number: phone_number.value,
-            userAvatar: userAvatar.value
-          },
-          state: {
-            userInfo: userData // 包含用户的详细信息
-          }
-        });
+        // 打开基础路径，并带上查询参数
+        window.open(`/?${queryParams}`, '_blank');
       } catch (error) {
-        console.error("获取用户信息失败:", error);
-        ElMessage.error('获取用户信息失败');
+        console.error("跳转个人信息页失败:", error);
+        ElMessage.error('跳转失败');
       }
+    }
+
+    // 修改联系我们跳转函数
+    function contactUs() {
+      // 构建查询参数
+      const queryParams = new URLSearchParams({
+        phone_number: phone_number.value,
+        user_id: user_id.value,
+        userAvatar: userAvatar.value,
+        redirect: '/contact' // 添加重定向参数
+      }).toString();
+
+      // 打开基础路径，并带上查询参数
+      window.open(`/?${queryParams}`, '_blank');
     }
 
     function viewNotifications() {
@@ -357,18 +353,6 @@ export default {
     function handlePageChange(page) {
       currentPage.value = page;
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // 在 setup 函数中添加新的处理函数
-    function contactUs() {
-      router.push({ 
-        name: 'ContactUs',
-        query: {
-          phone_number: phone_number.value,
-          user_id: user_id.value,
-          userAvatar: userAvatar.value
-        }
-      });
     }
 
     // 获取公告函数
