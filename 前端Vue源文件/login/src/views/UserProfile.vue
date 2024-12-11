@@ -1120,7 +1120,7 @@
 
       // 添加收藏商品分页相关的响应式变量
       const favoritesCurrentPage = ref(1);
-      const favoritesPageSize = 6; // 每页显示6个收藏商品
+      const favoritesPageSize = 4; // 每页显示4个收藏商品
       
       // 添加收藏商品分页的计算属性
       const favoritesPagesTotal = computed(() => 
