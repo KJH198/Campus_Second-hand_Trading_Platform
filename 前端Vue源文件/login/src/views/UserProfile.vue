@@ -191,7 +191,7 @@
                 <div v-if="!boughtOrders || boughtOrders.length === 0" class="no-orders">
                   暂无已买到的订单
                 </div>
-                <div v-else v-for="order in boughtOrders" 
+                <div v-else v-for="order in paginatedBoughtOrders" 
                      :key="order.goods_id" 
                      class="order-card" 
                      @click="goToOrderDetails(order)">
@@ -222,6 +222,16 @@
                   </div>
                 </div>
               </div>
+              <!-- 已买到的订单分页控件 -->
+              <div class="pagination" v-if="boughtOrders && boughtOrders.length > ordersPageSize">
+                <el-pagination
+                  v-model:current-page="boughtOrdersCurrentPage"
+                  :page-size="ordersPageSize"
+                  :total="boughtOrders.length"
+                  layout="prev, pager, next"
+                  @current-change="handleBoughtOrdersPageChange"
+                />
+              </div>
             </el-tab-pane>
             
             <el-tab-pane label="已卖出的" name="sold">
@@ -229,7 +239,7 @@
                 <div v-if="!soldOrders || soldOrders.length === 0" class="no-orders">
                   暂无已卖出的订单
                 </div>
-                <div v-else v-for="order in soldOrders" 
+                <div v-else v-for="order in paginatedSoldOrders" 
                      :key="order.goods_id" 
                      class="order-card" 
                      @click="goToOrderDetails(order)">
@@ -241,6 +251,16 @@
                     <div class="order-time">{{ formatTime(order.deal_time) }}</div>
                   </div>
                 </div>
+              </div>
+              <!-- 已卖出的订单分页控件 -->
+              <div class="pagination" v-if="soldOrders && soldOrders.length > ordersPageSize">
+                <el-pagination
+                  v-model:current-page="soldOrdersCurrentPage"
+                  :page-size="ordersPageSize"
+                  :total="soldOrders.length"
+                  layout="prev, pager, next"
+                  @current-change="handleSoldOrdersPageChange"
+                />
               </div>
             </el-tab-pane>
           </el-tabs>
@@ -1578,6 +1598,35 @@
         }
       }
 
+      // 订单分页相关的响应式变量
+      const boughtOrdersCurrentPage = ref(1);
+      const soldOrdersCurrentPage = ref(1);
+      const ordersPageSize = 3; // 每页显示3个订单
+
+      // 订单分页的计算属性
+      const paginatedBoughtOrders = computed(() => {
+        if (!boughtOrders.value) return [];
+        const start = (boughtOrdersCurrentPage.value - 1) * ordersPageSize;
+        const end = start + ordersPageSize;
+        return boughtOrders.value.slice(start, end);
+      });
+
+      const paginatedSoldOrders = computed(() => {
+        if (!soldOrders.value) return [];
+        const start = (soldOrdersCurrentPage.value - 1) * ordersPageSize;
+        const end = start + ordersPageSize;
+        return soldOrders.value.slice(start, end);
+      });
+
+      // 处理订单分页变化
+      function handleBoughtOrdersPageChange(page) {
+        boughtOrdersCurrentPage.value = page;
+      }
+
+      function handleSoldOrdersPageChange(page) {
+        soldOrdersCurrentPage.value = page;
+      }
+
       onMounted(() => {
         fetchUserInfo();
         fetchUserGoods();
@@ -1671,7 +1720,14 @@
         chatForm,
         chatRules,
         openChatDialog,
-        sendMessage
+        sendMessage,
+        boughtOrdersCurrentPage,
+        soldOrdersCurrentPage,
+        ordersPageSize,
+        paginatedBoughtOrders,
+        paginatedSoldOrders,
+        handleBoughtOrdersPageChange,
+        handleSoldOrdersPageChange
       };
     }
   };
