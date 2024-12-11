@@ -70,7 +70,7 @@ export default {
       return Math.ceil(filteredProducts.value.length / pageSize);
     });
 
-    // 修改���产品对象
+    // 修改
     const defaultProduct = {
       goods_id: 0,
       goods_name: "默认商品",
@@ -110,7 +110,7 @@ export default {
         filteredProducts.value = data.goods;
       } catch (error) {
         // console.error("加载商品失败", error);
-        // 创建包含33个默认商品的数组，使用新的属性名
+        // 创建包33个默认商品的数组，使用新的属性名
         const defaultProducts = Array(33).fill().map((_, index) => ({
           ...defaultProduct,
           goods_id: index + 1
@@ -149,8 +149,8 @@ export default {
         userAvatar.value = URL.createObjectURL(data);
         console.log("用户头像", userAvatar);
       } catch (error) {
-        console.error("加载用户头像失败", error);
-        // 使用导入的默认图片作为头像
+        console.error("加载用户头像失", error);
+        // 使用导入的默认图片作为像
         userAvatar.value = defaultAvatar;
       }
     }
@@ -193,7 +193,7 @@ export default {
           // 处理每个商品的图片
           data.goods.forEach(product => {
             if (product.picture !== null) {
-              // 将 base64 转换为 Blob，并创建临时 URL
+              // 将 base64 转换为 Blob，并创建临 URL
               product.picture = URL.createObjectURL(base64ToBlob(product.picture));
               console.log("商品图片", product.picture);
             }
@@ -222,42 +222,38 @@ export default {
       }
     }
 
+    // 修改个人信息跳转函数
     async function viewProfile() {
       try {
-        // 获取用户信息
-        const response = await fetch("/home", {
-          method: "POST",
-          headers: {
-            'Content-Type': 'application/json',
-            'type': "user_info"
-          },
-          body: JSON.stringify({
-            phone_number: phone_number.value,
-            user_id: user_id.value
-          })
-        });
+        // 构建查询参数
+        const queryParams = new URLSearchParams({
+          phone_number: phone_number.value,
+          user_id: user_id.value,
+          current_user_id: user_id.value,
+          userAvatar: userAvatar.value,
+          redirect: '/profile' // 添加重定向参数
+        }).toString();
 
-        if (!response.ok) throw new Error('获取用户信息失败');
-        
-        const userData = await response.json();
-        
-        // 通过路由导航时递用户息
-        router.push({
-          path: '/profile',
-          query: {
-            user_id: user_id.value,
-            current_user_id: user_id.value,  // 添加这一行，因为查看自己的个人页面时，current_user_id 就是 user_id
-            phone_number: phone_number.value,
-            userAvatar: userAvatar.value
-          },
-          state: {
-            userInfo: userData // 包含用户的详细信息
-          }
-        });
+        // 打开基础路径，并带上查询参数
+        window.open(`/?${queryParams}`, '_blank');
       } catch (error) {
-        console.error("获取用户信息失败:", error);
-        ElMessage.error('获取用户信息失败');
+        console.error("跳转个人信息页失败:", error);
+        ElMessage.error('跳转失败');
       }
+    }
+
+    // 修改联系我们跳转函数
+    function contactUs() {
+      // 构建查询参数
+      const queryParams = new URLSearchParams({
+        phone_number: phone_number.value,
+        user_id: user_id.value,
+        userAvatar: userAvatar.value,
+        redirect: '/contact' // 添加重定向参数
+      }).toString();
+
+      // 打开基础路径，并带上查询参数
+      window.open(`/?${queryParams}`, '_blank');
     }
 
     function viewNotifications() {
@@ -285,7 +281,7 @@ export default {
         }
         const data = await response.json();
         
-        // 处理商���图片
+        // 处理品图片
         if (data.goods && data.goods.length > 0) {
           data.goods.forEach(product => {
             if (product.picture !== null) {
@@ -333,46 +329,30 @@ export default {
       }
     }
 
-    // 修改跳转商品页函
+    // 修改跳转商品页函数
     function goToDetails(product) {
       console.log('跳转商品详情，商品数：', product);
-      router.push({
-        name: 'GoodDetails',  // 对应 router/index.js 中的路由名称
-        params: { 
-          productId: product.goods_id  // 路由参数
-        },
-        query: { 
-          phone_number: phone_number.value,  // 添加电话号码
-          user_id: user_id.value,           // 添加用户ID
-          current_user_id: user_id.value,   // 添加当前登录者的ID
-          picture: product.picture,         // 商品图片
-          name: product.goods_name,         // 商品名称
-          price: product.goods_price,       // 商品价格
-          userAvatar: userAvatar.value      // 添加用户头像
-        }
-      }).then(() => {
-        console.log('跳转成功');
-      }).catch(err => {
-        console.error('跳转失败：', err);
-      });
+      
+      // 构建查询参数
+      const queryParams = new URLSearchParams({
+        phone_number: phone_number.value,
+        user_id: user_id.value,
+        current_user_id: user_id.value,
+        picture: product.picture,
+        name: product.goods_name,
+        price: product.goods_price,
+        userAvatar: userAvatar.value,
+        redirect: `/goods/${product.goods_id}` // 添加重定向参数
+      }).toString();
+
+      // 打开基础路径，并带上查询参数
+      window.open(`/?${queryParams}`, '_blank');
     }
 
     // 添加页面切换函数
     function handlePageChange(page) {
       currentPage.value = page;
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // 在 setup 函数中添加新的处理函数
-    function contactUs() {
-      router.push({ 
-        name: 'ContactUs',
-        query: {
-          phone_number: phone_number.value,
-          user_id: user_id.value,
-          userAvatar: userAvatar.value
-        }
-      });
     }
 
     // 获取公告函数
@@ -430,7 +410,7 @@ export default {
                   throw new Error('更新查看时间失败');
                 }
               } catch (error) {
-                console.error("更新查看时间失败:", error);
+                console.error("更新看时间失败:", error);
               }
             }
           }
@@ -518,7 +498,7 @@ export default {
           deliver_name: msg.deliver_name
         }));
         
-        // 处理发送的消息
+        // 处理发的消息
         const sentMessages = data.sent_messages.map(msg => ({
           message_id: msg.message_id,
           content: msg.content,
@@ -576,7 +556,7 @@ export default {
       selectedMessage.value = message;
     }
 
-    // 发送回���
+    // 发送回
     async function sendReply() {
       // 检查是否在回复自己的消息
       if (selectedMessage.value.type === 'sent') {
@@ -665,7 +645,7 @@ export default {
         }
 
         const data = await response.json();
-        console.log("后端返回的上次查看时间数据:", data.looktime);
+        console.log("后端返回的上次查看时数据:", data.looktime);
         lastViewTime.value = new Date(data.looktime);
         
         // 获取到上次查看时间后，检查是否有新公告
@@ -686,7 +666,7 @@ export default {
       fetchUserAvatar();
       document.addEventListener('click', closeDropdown);
       fetchLastViewTime(); // 添加这行
-      fetchAnnouncements(); // 立即获取一次
+      fetchAnnouncements(); // 立即获取次
       startPolling(); // 开始轮询
     });
 

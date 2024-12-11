@@ -143,47 +143,36 @@
         <div v-if="isCurrentUser" class="favorites-container">
           <div class="favorites-section">
             <h2>我的收藏</h2>
-          <div class="goods-grid">
-            <div v-if="!favorites || favorites.length === 0" class="no-favorites">
-              暂无收藏商品
-            </div>
-            <div 
-              v-else
-              v-for="favorite in paginatedFavorites" 
-              :key="favorite.goods_id" 
-              class="favorite-card"
-              @click="goToGoodsDetails(favorite)"
-            >
-              <div class="favorite-image">
-                <img :src="favorite.picture" :alt="favorite.goods_name" />
+            <div class="goods-grid">
+              <div v-if="!favorites || favorites.length === 0" class="no-favorites">
+                暂无收藏商品
               </div>
-              <div class="favorite-info">
-                <h3 class="favorite-name">{{ favorite.goods_name }}</h3>
-                <p class="favorite-price">¥{{ favorite.goods_price }}</p>
+              <div 
+                v-else
+                v-for="favorite in paginatedFavorites" 
+                :key="favorite.goods_id" 
+                class="favorite-card"
+                @click="goToGoodsDetails(favorite)"
+              >
+                <div class="favorite-image">
+                  <img :src="favorite.picture" :alt="favorite.goods_name" />
+                </div>
+                <div class="favorite-info">
+                  <h3 class="favorite-name">{{ favorite.goods_name }}</h3>
+                  <p class="favorite-price">¥{{ favorite.goods_price }}</p>
+                </div>
               </div>
-              
             </div>
-          
-          <!-- 收藏商品分页控件 -->
-          <div class="pagination" v-if="favorites.length > favoritesPageSize">
-            <button 
-              class="page-button"
-              :disabled="favoritesCurrentPage === 1"
-              @click="handleFavoritesPageChange(favoritesCurrentPage - 1)"
-            >
-              上一页
-            </button>
-            <span class="page-info">
-              {{ favoritesCurrentPage }} / {{ favoritesPagesTotal }}
-            </span>
-            <button 
-              class="page-button"
-              :disabled="favoritesCurrentPage === favoritesPagesTotal"
-              @click="handleFavoritesPageChange(favoritesCurrentPage + 1)"
-            >
-              下一页
-              </button>
-            </div>
+            
+            <!-- 收藏商品分页控件 -->
+            <div class="pagination" v-if="favorites.length > favoritesPageSize">
+              <el-pagination
+                v-model:current-page="favoritesCurrentPage"
+                :page-size="favoritesPageSize"
+                :total="favorites.length"
+                layout="prev, pager, next"
+                @current-change="handleFavoritesPageChange"
+              />
             </div>
           </div>
         </div>
@@ -1120,7 +1109,7 @@
 
       // 添加收藏商品分页相关的响应式变量
       const favoritesCurrentPage = ref(1);
-      const favoritesPageSize = 4; // 每页显示4个收藏商品
+      const favoritesPageSize = 5; // 每页显示5个收藏商品
       
       // 添加收藏商品分页的计算属性
       const favoritesPagesTotal = computed(() => 
@@ -2003,6 +1992,8 @@
   align-items: center;
   gap: 20px;
   margin-top: 30px;
+  padding: 20px 0;
+  border-top: 1px solid #eee;
 }
 
 .page-button {
@@ -2025,7 +2016,7 @@
 }
 
 .page-info {
-  font-size: 16px;
+  font-size: 14px;
   color: #666;
 }
 

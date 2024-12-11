@@ -50,7 +50,17 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   console.log('Current routes:', router.getRoutes().map(r => r.path))
   console.log('Navigating to:', to.path)
-  next()
+  // 如果是首页且有重定向参数
+  if (to.path === '/' && to.query.redirect) {
+    // 提取查询参数中的重定向路径
+    const redirectPath = to.query.redirect;
+    const query = { ...to.query };
+    delete query.redirect;  // 删除重定向参数
+    // 重定向到目标路径
+    next({ path: redirectPath, query });
+  } else {
+    next();
+  }
 })
 
 export default router
