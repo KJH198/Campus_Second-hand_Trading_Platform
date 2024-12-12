@@ -143,47 +143,36 @@
         <div v-if="isCurrentUser" class="favorites-container">
           <div class="favorites-section">
             <h2>我的收藏</h2>
-          <div class="goods-grid">
-            <div v-if="!favorites || favorites.length === 0" class="no-favorites">
-              暂无收藏商品
-            </div>
-            <div 
-              v-else
-              v-for="favorite in paginatedFavorites" 
-              :key="favorite.goods_id" 
-              class="favorite-card"
-              @click="goToGoodsDetails(favorite)"
-            >
-              <div class="favorite-image">
-                <img :src="favorite.picture" :alt="favorite.goods_name" />
+            <div class="goods-grid">
+              <div v-if="!favorites || favorites.length === 0" class="no-favorites">
+                暂无收藏商品
               </div>
-              <div class="favorite-info">
-                <h3 class="favorite-name">{{ favorite.goods_name }}</h3>
-                <p class="favorite-price">¥{{ favorite.goods_price }}</p>
+              <div 
+                v-else
+                v-for="favorite in paginatedFavorites" 
+                :key="favorite.goods_id" 
+                class="favorite-card"
+                @click="goToGoodsDetails(favorite)"
+              >
+                <div class="favorite-image">
+                  <img :src="favorite.picture" :alt="favorite.goods_name" />
+                </div>
+                <div class="favorite-info">
+                  <h3 class="favorite-name">{{ favorite.goods_name }}</h3>
+                  <p class="favorite-price">¥{{ favorite.goods_price }}</p>
+                </div>
               </div>
-              
             </div>
-          
-          <!-- 收藏商品分页控件 -->
-          <div class="pagination" v-if="favorites.length > favoritesPageSize">
-            <button 
-              class="page-button"
-              :disabled="favoritesCurrentPage === 1"
-              @click="handleFavoritesPageChange(favoritesCurrentPage - 1)"
-            >
-              上一页
-            </button>
-            <span class="page-info">
-              {{ favoritesCurrentPage }} / {{ favoritesPagesTotal }}
-            </span>
-            <button 
-              class="page-button"
-              :disabled="favoritesCurrentPage === favoritesPagesTotal"
-              @click="handleFavoritesPageChange(favoritesCurrentPage + 1)"
-            >
-              下一页
-              </button>
-            </div>
+            
+            <!-- 收藏商品分页控件 -->
+            <div class="pagination" v-if="favorites.length > favoritesPageSize">
+              <el-pagination
+                v-model:current-page="favoritesCurrentPage"
+                :page-size="favoritesPageSize"
+                :total="favorites.length"
+                layout="prev, pager, next"
+                @current-change="handleFavoritesPageChange"
+              />
             </div>
           </div>
         </div>
@@ -202,7 +191,7 @@
                 <div v-if="!boughtOrders || boughtOrders.length === 0" class="no-orders">
                   暂无已买到的订单
                 </div>
-                <div v-else v-for="order in boughtOrders" 
+                <div v-else v-for="order in paginatedBoughtOrders" 
                      :key="order.goods_id" 
                      class="order-card" 
                      @click="goToOrderDetails(order)">
@@ -233,6 +222,16 @@
                   </div>
                 </div>
               </div>
+              <!-- 已买到的订单分页控件 -->
+              <div class="pagination" v-if="boughtOrders && boughtOrders.length > ordersPageSize">
+                <el-pagination
+                  v-model:current-page="boughtOrdersCurrentPage"
+                  :page-size="ordersPageSize"
+                  :total="boughtOrders.length"
+                  layout="prev, pager, next"
+                  @current-change="handleBoughtOrdersPageChange"
+                />
+              </div>
             </el-tab-pane>
             
             <el-tab-pane label="已卖出的" name="sold">
@@ -240,7 +239,7 @@
                 <div v-if="!soldOrders || soldOrders.length === 0" class="no-orders">
                   暂无已卖出的订单
                 </div>
-                <div v-else v-for="order in soldOrders" 
+                <div v-else v-for="order in paginatedSoldOrders" 
                      :key="order.goods_id" 
                      class="order-card" 
                      @click="goToOrderDetails(order)">
@@ -252,6 +251,16 @@
                     <div class="order-time">{{ formatTime(order.deal_time) }}</div>
                   </div>
                 </div>
+              </div>
+              <!-- 已卖出的订单分页控件 -->
+              <div class="pagination" v-if="soldOrders && soldOrders.length > ordersPageSize">
+                <el-pagination
+                  v-model:current-page="soldOrdersCurrentPage"
+                  :page-size="ordersPageSize"
+                  :total="soldOrders.length"
+                  layout="prev, pager, next"
+                  @current-change="handleSoldOrdersPageChange"
+                />
               </div>
             </el-tab-pane>
           </el-tabs>
@@ -1120,7 +1129,7 @@
 
       // 添加收藏商品分页相关的响应式变量
       const favoritesCurrentPage = ref(1);
-      const favoritesPageSize = 6; // 每页显示6个收藏商品
+      const favoritesPageSize = 5; // 每页显示5个收藏商品
       
       // 添加收藏商品分页的计算属性
       const favoritesPagesTotal = computed(() => 
@@ -1589,6 +1598,35 @@
         }
       }
 
+      // 订单分页相关的响应式变量
+      const boughtOrdersCurrentPage = ref(1);
+      const soldOrdersCurrentPage = ref(1);
+      const ordersPageSize = 3; // 每页显示3个订单
+
+      // 订单分页的计算属性
+      const paginatedBoughtOrders = computed(() => {
+        if (!boughtOrders.value) return [];
+        const start = (boughtOrdersCurrentPage.value - 1) * ordersPageSize;
+        const end = start + ordersPageSize;
+        return boughtOrders.value.slice(start, end);
+      });
+
+      const paginatedSoldOrders = computed(() => {
+        if (!soldOrders.value) return [];
+        const start = (soldOrdersCurrentPage.value - 1) * ordersPageSize;
+        const end = start + ordersPageSize;
+        return soldOrders.value.slice(start, end);
+      });
+
+      // 处理订单分页变化
+      function handleBoughtOrdersPageChange(page) {
+        boughtOrdersCurrentPage.value = page;
+      }
+
+      function handleSoldOrdersPageChange(page) {
+        soldOrdersCurrentPage.value = page;
+      }
+
       onMounted(() => {
         fetchUserInfo();
         fetchUserGoods();
@@ -1682,7 +1720,14 @@
         chatForm,
         chatRules,
         openChatDialog,
-        sendMessage
+        sendMessage,
+        boughtOrdersCurrentPage,
+        soldOrdersCurrentPage,
+        ordersPageSize,
+        paginatedBoughtOrders,
+        paginatedSoldOrders,
+        handleBoughtOrdersPageChange,
+        handleSoldOrdersPageChange
       };
     }
   };
@@ -2003,6 +2048,8 @@
   align-items: center;
   gap: 20px;
   margin-top: 30px;
+  padding: 20px 0;
+  border-top: 1px solid #eee;
 }
 
 .page-button {
@@ -2025,7 +2072,7 @@
 }
 
 .page-info {
-  font-size: 16px;
+  font-size: 14px;
   color: #666;
 }
 
