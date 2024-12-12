@@ -6,8 +6,8 @@ import random
 
 # 自己修改为本地存储图片文件夹的绝对路径 + \\
 # picturePath = "E:\\database\\作业\\数据库小组作业\\login_new\\Campus_Second-hand_Trading_Platform\\Code\\picture\\"
-picturePath = "C:\\Users\\kjh15\\Desktop\\Project\\Campus_Second-hand_Trading_Platform\\Code\\picture\\"
-# picturePath = "E:\\Junior_Autumn\\Database\\Final_Project\\Campus_Second-hand_Trading_Platform\\Code\\picture\\"
+# picturePath = "C:\\Users\\kjh15\\Desktop\\Project\\Campus_Second-hand_Trading_Platform\\Code\\picture\\"
+picturePath = "E:\\Junior_Autumn\\Database\\Final_Project\\Campus_Second-hand_Trading_Platform\\Code\\picture\\"
 Default_url = 'default.jpg'
 
 ############################################## 用户管理 ################################################################

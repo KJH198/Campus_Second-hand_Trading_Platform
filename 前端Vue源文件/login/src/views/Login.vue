@@ -340,7 +340,7 @@ export default {
       transform:translate(0,-50%);
       width: 430px;
       height: 400px;
-      background: url("../assets/tubiao.png") white no-repeat center top 20px;
+      background: url("../assets/logo.jpg") white no-repeat center top 20px;
       background-size: 50%;
       border-radius: 0 10px 10px 0;
       transition: 0.5s ease-in-out;
