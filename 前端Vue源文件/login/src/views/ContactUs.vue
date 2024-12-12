@@ -2,10 +2,6 @@
   <div class="contact-us">
     <header class="nav-header">
       <div class="nav-container">
-        <button class="back-btn" @click="goBack">
-          <el-icon><ArrowLeft /></el-icon>
-          返回
-        </button>
         <h1 class="nav-title">本站管理员</h1>
       </div>
     </header>
