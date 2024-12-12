@@ -231,7 +231,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: url("../assets/back.png") no-repeat center;
+  background: url("../assets/new_back.png") no-repeat center;
   background-size: cover;
   .slider{
     position: relative;
