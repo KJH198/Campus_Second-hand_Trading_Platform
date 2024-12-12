@@ -57,7 +57,7 @@ class Goods(db.Model):
     category_name = db.Column(db.String(80), nullable = False)  
     goods_price = db.Column(db.String(80), nullable = False)
     goods_description = db.Column(db.Text, nullable = True)
-    goods_state = db.Column(db.String(80), nullable = False)    # 在售,已售出
+    goods_state = db.Column(db.String(80), nullable = False)    # 在售,已售出,已送达
     heat = db.Column(db.Integer, nullable = False)
     
 # 订单表

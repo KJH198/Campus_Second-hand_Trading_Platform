@@ -784,17 +784,18 @@ def getUserCollection(user_id):
     for collection in collections:
         goods_id_list.append(collection.goods_id)
     for id in goods_id_list:
-        randGoods = Goods.query.filter_by(goods_id = id).first()
-        goods_id = randGoods.goods_id
-        goods_name = randGoods.goods_name
-        goods_price = randGoods.goods_price
-        first_picture = Picture.query.filter_by(goods_id = goods_id).first() # 只获取第一个图片
-        
-        picture_local_url = picturePath + first_picture.picture_url
-        with open(picture_local_url,'rb') as file:
-            picture_byte_stream = file.read()
-        picture = base64.b64encode(picture_byte_stream).decode("ascii")
-        data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":picture})
+        goods = Goods.query.filter_by(goods_id = id).first()
+        if (goods.goods_state == '在售'):
+            goods_id = goods.goods_id
+            goods_name = goods.goods_name
+            goods_price = goods.goods_price
+            first_picture = Picture.query.filter_by(goods_id = goods_id).first() # 只获取第一个图片
+            
+            picture_local_url = picturePath + first_picture.picture_url
+            with open(picture_local_url,'rb') as file:
+                picture_byte_stream = file.read()
+            picture = base64.b64encode(picture_byte_stream).decode("ascii")
+            data.append({"goods_id":goods_id,"goods_name":goods_name,"goods_price":goods_price,"picture":picture})
     return data
 
 ################################################### 举报管理 ##############################################################
