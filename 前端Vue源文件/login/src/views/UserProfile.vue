@@ -1513,7 +1513,16 @@
         const data = await response.json();
         if (data.success) {
           ElMessage.success('确认送达成功');
-          await fetchOrders(); // 重新获取订单列表
+          //await fetchOrders(); // 重新获取订单列表
+          await fetchUserInfo();
+          await fetchUserGoods();
+          await fetchFavorites();
+          
+          await fetchOrders();
+          // 延迟1秒后刷新页面
+          // setTimeout(() => {
+          //   router.go(0);
+          // }, 1000);
         }
         } catch (error) {
           console.error('Error confirming delivery:', error);
@@ -1538,7 +1547,16 @@
       const data = await response.json();
       if (data.success) {
         ElMessage.success('退款申请已提交');
-        await fetchOrders(); // 重新获取订单列表
+        //await fetchOrders(); // 重新获取订单列表
+        await fetchUserInfo();
+        await fetchUserGoods();
+        await fetchFavorites();
+        
+        await fetchOrders();
+        // 延迟1秒后刷新页面
+        // setTimeout(() => {
+        //   router.go(0);
+        // }, 1000);
       }
       } catch (error) {
         console.error('Error requesting refund:', error);
